@@ -55,6 +55,8 @@ body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--tx);
 .tbtn:active{background:var(--dark3)}
 .tbtn.green{background:var(--accent);border-color:var(--ad)}
 .tbtn.green:active{background:var(--ad)}
+.tbtn.danger{background:rgba(239,68,68,.15);border-color:rgba(239,68,68,.35);color:#fca5a5}
+.tbtn.danger:active{background:rgba(239,68,68,.28)}
 .tbtn.help{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.2);font-size:14px;padding:6px 10px}
 
 /* HELP MODAL */
@@ -214,20 +216,18 @@ body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--tx);
   font-size:16px;font-weight:800;color:var(--ad);padding:3px 0;outline:none}
 
 /* FAB */
-.fab{position:fixed;bottom:calc(var(--nav-h) + 8px);left:50%;
-  transform:translateX(-50%);width:calc(100% - 24px);max-width:456px;
-  display:flex;gap:8px;z-index:40;pointer-events:none}
+.fab{position:fixed;bottom:calc(var(--nav-h) + 10px);left:50%;
+  transform:translateX(-50%);
+  z-index:40;pointer-events:none}
 .fab>*{pointer-events:all}
-.fab-export{flex:1;background:var(--accent);color:#fff;border:none;
-  padding:13px;border-radius:13px;font-family:'Outfit',sans-serif;
-  font-size:14px;font-weight:700;cursor:pointer;
-  display:flex;align-items:center;justify-content:center;gap:6px;
-  box-shadow:0 4px 20px rgba(22,163,74,.4);
-  -webkit-user-select:none;user-select:none}
-.fab-export:active{transform:scale(.97)}
-.fab-rst{background:var(--w);border:1.5px solid var(--bd);color:var(--mu);
-  padding:13px 14px;border-radius:13px;font-family:'Outfit',sans-serif;
-  font-size:13px;font-weight:600;cursor:pointer;box-shadow:var(--sh)}
+.fab-scan{border:none;padding:9px 18px;border-radius:22px;cursor:pointer;
+  font-family:'Outfit',sans-serif;-webkit-user-select:none;user-select:none;
+  background:var(--dark);color:#fff;
+  display:flex;align-items:center;gap:7px;
+  font-size:13px;font-weight:700;white-space:nowrap;
+  box-shadow:0 3px 14px rgba(0,0,0,.28);transition:transform .15s,opacity .15s}
+.fab-scan.on{background:#dc2626;animation:pulse 1.2s infinite}
+.fab-scan:active{transform:scale(.96)}
 
 /* ════════════════════════════════════════════
    PAGE: ETIQUETAS
@@ -580,14 +580,15 @@ body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--tx);
             placeholder="Buscar producto..." oninput="invRender()"
             autocomplete="off" autocorrect="off" spellcheck="false">
         </div>
-        <button class="scan-btn" id="scanBtn" onclick="toggleScanner()">📷</button>
       </div>
       <div class="cat-pills" id="invPills"></div>
     </div>
     <div class="inv-scroll" id="invScroll"></div>
     <div class="fab">
-      <button class="fab-rst" onclick="openReset()">↺</button>
-      <button class="fab-export" onclick="exportExcel()">📊 Exportar Excel</button>
+      <button class="fab-scan" id="scanBtn" onclick="toggleScanner()">
+        <span id="scanIcon">📷</span>
+        <span id="scanLabel">Escanear código</span>
+      </button>
     </div>
   </div>
 
@@ -1071,8 +1072,8 @@ function load(){
    NAVIGATION
 ════════════════════════════════════════════ */
 const TOP_ACTIONS={
-  inv:`<button class="tbtn" onclick="openReset()">↺ Limpiar</button>
-       <button class="tbtn green" onclick="exportExcel()">📊 Excel</button>`,
+  inv:`<button class="tbtn danger" onclick="openReset()">🗑 Limpiar</button>
+       <button class="tbtn green" onclick="exportExcel()">⬇ Excel</button>`,
   lbl:`<button class="tbtn" onclick="lblClr()">✕</button>
        <button class="tbtn green" onclick="openLblPreview()">🖨 Imprimir</button>`,
   admin:`<button class="tbtn" onclick="downloadTemplate()">⬇ Plantilla</button>`
@@ -1255,7 +1256,10 @@ let fallbackStream=null,fallbackTick=null;
 async function toggleScanner(){if(scanRunning)stopScanner();else await startScanner();}
 async function startScanner(){
   const ov=document.getElementById('scannerOv'),btn=document.getElementById('scanBtn');
-  ov.classList.add('open');btn.classList.add('on');btn.textContent='⏹';scanRunning=true;
+  const lbl=document.getElementById('scanLabel'),sub=document.getElementById('scanSub'),ico=document.getElementById('scanIcon');
+  ov.classList.add('open');btn.classList.add('on');
+  if(ico)ico.textContent='⏹';if(lbl)lbl.textContent='Detener cámara';if(sub)sub.textContent='Toca para cancelar el escaneo';
+  scanRunning=true;
   try{
     if(typeof ZXing!=='undefined'){
       const hints=new Map();
@@ -1282,7 +1286,9 @@ async function startScanner(){
 function stopScanner(){
   scanRunning=false;
   const ov=document.getElementById('scannerOv'),btn=document.getElementById('scanBtn');
-  ov.classList.remove('open');btn.classList.remove('on');btn.textContent='📷';
+  const lbl=document.getElementById('scanLabel'),sub=document.getElementById('scanSub'),ico=document.getElementById('scanIcon');
+  ov.classList.remove('open');btn.classList.remove('on');
+  if(ico)ico.textContent='📷';if(lbl)lbl.textContent='Escanear código';if(sub)sub.textContent='Apunta al código QR o de barras';
   if(codeReader){try{codeReader.reset();}catch(e){}codeReader=null;}
   if(fallbackTick){clearInterval(fallbackTick);fallbackTick=null;}
   if(fallbackStream){fallbackStream.getTracks().forEach(t=>t.stop());fallbackStream=null;}
