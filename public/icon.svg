@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="96" fill="#0f172a"/>
+  <rect x="40" y="40" width="432" height="432" rx="72" fill="#1e293b"/>
+  <!-- G -->
+  <text x="88" y="320" font-family="Arial Black, Arial, sans-serif" font-weight="900" font-size="230" fill="#16a34a">G</text>
+  <!-- & -->
+  <text x="238" y="320" font-family="Arial Black, Arial, sans-serif" font-weight="900" font-size="140" fill="#64748b">&amp;</text>
+  <!-- Z -->
+  <text x="330" y="320" font-family="Arial Black, Arial, sans-serif" font-weight="900" font-size="230" fill="#ffffff">Z</text>
+  <!-- bottom label -->
+  <rect x="136" y="356" width="240" height="44" rx="10" fill="#16a34a"/>
+  <text x="256" y="385" font-family="Arial, sans-serif" font-weight="700" font-size="26" fill="#ffffff" text-anchor="middle">ALMACÉN</text>
+</svg>
