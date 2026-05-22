@@ -102,6 +102,7 @@ export default function AdminPage() {
   function buildPreview(rows, headers, map) {
     if (map.name < 0) { setPendingProds(null); return }
     const newCats = {}
+    const usedExistingCats = {}
     const catMap = {}
     categories.forEach(c => { catMap[c.id] = c; catMap[c.name.toLowerCase()] = c })
     let nextId = Math.max(0, ...products.map(p => p.id)) + 1
@@ -118,6 +119,8 @@ export default function AdminPage() {
           newCats[safeId] = { id: safeId, name: catRaw || 'Sin categoría', emoji: CAT_EMOJIS[ci % CAT_EMOJIS.length], color: CAT_COLORS[ci % CAT_COLORS.length] }
         }
         catObj = newCats[safeId]
+      } else {
+        usedExistingCats[catObj.id] = catObj
       }
       let id
       if (codeRaw && /^GYZ-?(\d+)$/i.test(codeRaw)) id = parseInt(codeRaw.replace(/^GYZ-?/i, ''))
@@ -126,7 +129,7 @@ export default function AdminPage() {
       prods.push({ id, category_id: catObj.id, name })
     })
     setPendingProds(prods)
-    setPendingCats([...Object.values(newCats)])
+    setPendingCats([...Object.values(usedExistingCats), ...Object.values(newCats)])
   }
 
   useEffect(() => {
