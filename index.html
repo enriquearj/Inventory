@@ -483,22 +483,32 @@ body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--tx);
 .pwa-banner-close{background:none;border:none;color:#64748b;
   font-size:18px;cursor:pointer;padding:4px;flex-shrink:0}
 
+/* LABEL GRID — preview modal & print */
+.ls{display:grid;gap:3px;width:100%}
+.ls.sm{grid-template-columns:repeat(8,1fr)}
+.ls.md{grid-template-columns:repeat(6,1fr)}
+.ls.lg{grid-template-columns:repeat(4,1fr)}
+.lbl{border:1px solid #e2e8f0;border-radius:2px;padding:4px;display:flex;
+  flex-direction:column;align-items:center;gap:2px;background:#fff}
+.lq img{display:block}
+.lc{font-size:7px;color:#1e293b;font-family:monospace;font-weight:700;text-align:center}
 /* PRINT AREA */
 .print-area{display:none}
 @media print{
+  html,body{max-width:none!important;width:100%!important;height:auto!important;
+    overflow:visible!important;margin:0!important;padding:0!important;
+    background:#fff!important;box-shadow:none!important}
   body>*:not(.print-area){display:none!important}
-  .print-area{display:block!important}
-  @page{margin:4mm}
-  .print-area .ls{display:grid!important;gap:1mm;width:100%}
-  .print-area .ls.sm{grid-template-columns:repeat(8,1fr)!important}
+  .print-area{display:block!important;width:100%!important;background:#fff!important}
+  @page{margin:5mm}
+  .print-area .ls{gap:1mm!important}
   .print-area .ls.md{grid-template-columns:repeat(6,1fr)!important}
   .print-area .ls.lg{grid-template-columns:repeat(4,1fr)!important}
   .print-area .lbl{border:.3mm solid #e2e8f0!important;border-radius:1mm!important;
-    padding:1mm!important;display:flex!important;flex-direction:column!important;
-    align-items:center!important;gap:.5mm!important;break-inside:avoid!important;
-    background:#fff!important}
-  .print-area .lq img{display:block!important}
-  .print-area .lc{font-size:5pt!important;color:#1e293b!important;font-family:monospace!important;font-weight:700!important}
+    padding:1mm!important;gap:.5mm!important;break-inside:avoid!important;background:#fff!important}
+  .print-area .lq img{display:block!important;width:100%!important;height:auto!important}
+  .print-area .lc{font-size:5pt!important;color:#1e293b!important;font-family:monospace!important;
+    font-weight:700!important;letter-spacing:-.2px!important}
 }
 
 /* ADMIN page specific */
@@ -603,7 +613,6 @@ body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--tx);
             autocomplete="off" autocorrect="off" spellcheck="false">
         </div>
         <div class="stog">
-          <button class="stbtn" id="bsm" onclick="lsz('sm')">Peq</button>
           <button class="stbtn active" id="bmd" onclick="lsz('md')">Med</button>
           <button class="stbtn" id="blg" onclick="lsz('lg')">Grd</button>
         </div>
@@ -871,7 +880,7 @@ body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--tx);
         <div class="hacc-body">
           <div class="hacc-item"><span class="hacc-ic">1️⃣</span><span>Toca los productos que necesitan etiqueta — se marcan en verde al seleccionarlos.</span></div>
           <div class="hacc-item"><span class="hacc-ic">2️⃣</span><span>¿Necesitas etiquetar toda una categoría? Toca el filtro de esa categoría y luego <b>Sel. cat.</b></span></div>
-          <div class="hacc-item"><span class="hacc-ic">3️⃣</span><span>Elige el tamaño: <b>Peq</b> = más etiquetas por hoja · <b>Grd</b> = etiquetas más grandes y fáciles de leer.</span></div>
+          <div class="hacc-item"><span class="hacc-ic">3️⃣</span><span>Elige el tamaño: <b>Med</b> = más etiquetas por hoja (6 columnas) · <b>Grd</b> = etiquetas más grandes y fáciles de leer (4 columnas).</span></div>
           <div class="hacc-item"><span class="hacc-ic">4️⃣</span><span>Toca <b>🖨 Ver e imprimir</b> y confirma la impresión en la pantalla que aparece.</span></div>
           <div class="hacc-tip">💡 El número sobre el ícono 🏷 te dice cuántos productos tienes listos para imprimir.</div>
         </div>
@@ -1420,7 +1429,7 @@ function updLblBar(){const b=document.getElementById('lselBar'),c=document.getEl
   else b.classList.add('h');
   const nb=document.getElementById('nbLbl');
   if(nb){nb.textContent=lblSel.size||'';lblSel.size>0?nb.classList.add('show'):nb.classList.remove('show');}}
-function lsz(s){lblSize=s;['sm','md','lg'].forEach(x=>document.getElementById('b'+x).classList.toggle('active',x===s));}
+function lsz(s){lblSize=s;['md','lg'].forEach(x=>document.getElementById('b'+x).classList.toggle('active',x===s));}
 
 function genQR(code,s){
   return new Promise(res=>{
@@ -1434,7 +1443,7 @@ function genQR(code,s){
   });
 }
 function lhtml(p,u,s){const cat=gc(p.c),code='GYZ-'+p.id,px=qrPx(s);
-  return `<div class="lbl" style="border-top:2px solid ${cat.color}"><div class="lq"><img src="${u}" width="${px}" height="${px}" alt="${code}"></div><div class="lc">${code}</div></div>`;}
+  return `<div class="lbl"><div class="lq"><img src="${u}" width="${px}" height="${px}" alt="${code}"></div><div class="lc">${code}</div></div>`;}
 
 async function openLblPreview(){
   if(!lblSel.size){showToast('⚠️ Selecciona al menos un producto');return;}
@@ -1446,10 +1455,9 @@ async function openLblPreview(){
   const qm={};
   await Promise.all(prods.map(async p=>{qm[p.id]=await genQR('GYZ-'+p.id,lblSize);}));
   const sh=document.createElement('div');sh.className=`ls ${lblSize}`;
+  sh.style='padding:6px';
   prods.forEach(p=>{sh.innerHTML+=lhtml(p,qm[p.id],lblSize);});
-  const w=document.createElement('div');
-  w.style='background:#fff;padding:10mm;border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,.15);max-width:210mm;margin:0 auto';
-  w.appendChild(sh);pb.innerHTML='';pb.appendChild(w);
+  pb.innerHTML='';pb.appendChild(sh);
   window._pqm=qm;window._ppr=prods;
 }
 function closeLblModal(){document.getElementById('lblModal').classList.remove('open');}
@@ -1458,13 +1466,7 @@ function doPrint(){
   const sh=document.createElement('div');sh.className=`ls ${lblSize}`;
   window._ppr.forEach(p=>{sh.innerHTML+=lhtml(p,window._pqm[p.id],lblSize);});
   const pa=document.getElementById('printArea');pa.innerHTML='';
-  const style=document.createElement('style');
-  style.textContent=`.ls{display:grid;gap:1mm;width:100%}.ls.sm{grid-template-columns:repeat(8,1fr)}.ls.md{grid-template-columns:repeat(6,1fr)}.ls.lg{grid-template-columns:repeat(4,1fr)}
-  .lbl{border:.3mm solid #e2e8f0;border-radius:1mm;padding:1mm;display:flex;flex-direction:column;align-items:center;gap:.5mm;break-inside:avoid;background:#fff;font-family:monospace}
-  .lq img{display:block!important}
-  .lc{font-size:5pt;color:#1e293b;font-weight:700;letter-spacing:-.2px}
-  .ls.sm .lc{font-size:4.5pt}.ls.lg .lc{font-size:6pt}`;
-  pa.appendChild(style);pa.appendChild(sh);
+  pa.appendChild(sh);
   closeLblModal();setTimeout(()=>window.print(),200);
 }
 
