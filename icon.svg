@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Background -->
+  <rect width="512" height="512" rx="110" fill="#0f172a"/>
+  <!-- Box body -->
+  <rect x="96" y="220" width="320" height="196" rx="16" fill="#1e293b"/>
+  <!-- Box lid left -->
+  <polygon points="96,220 196,160 256,220" fill="#334155"/>
+  <!-- Box lid right -->
+  <polygon points="256,220 316,160 416,220" fill="#475569"/>
+  <!-- Box lid center flap -->
+  <polygon points="196,160 316,160 256,220" fill="#16a34a"/>
+  <!-- Box vertical center line -->
+  <line x1="256" y1="220" x2="256" y2="416" stroke="#334155" stroke-width="6"/>
+  <!-- Box horizontal belt -->
+  <rect x="96" y="290" width="320" height="10" rx="4" fill="#16a34a" opacity="0.6"/>
+  <!-- G&Z text -->
+  <text x="256" y="390" font-family="Arial Black, Arial, sans-serif" font-weight="900" font-size="70" fill="#16a34a" text-anchor="middle" letter-spacing="-2">G&amp;Z</text>
+</svg>
