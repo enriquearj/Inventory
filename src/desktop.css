@@ -26,7 +26,6 @@
 /* ── 1024px+: desktop layout ── */
 @media (min-width: 1024px) {
 
-  /* body y root ocupan toda la pantalla */
   body {
     max-width: 100%;
     box-shadow: none;
@@ -38,7 +37,6 @@
     width: 100%;
   }
 
-  /* TopBar cubre todo el ancho */
   .topbar {
     padding: 0 28px;
   }
@@ -64,11 +62,8 @@
     gap: 4px;
     box-shadow: none;
     z-index: auto;
-    /* Logo / marca en la parte de arriba */
-    padding-top: 20px;
   }
 
-  /* Ítem del nav lateral */
   .nav-item {
     flex: none;
     flex-direction: row;
@@ -107,12 +102,10 @@
     transform: none;
   }
 
-  /* Quitar barra verde de abajo */
   .nav-item::after {
     display: none;
   }
 
-  /* Badge reposicionado */
   .nav-badge {
     position: static;
     margin-left: auto;
@@ -120,7 +113,7 @@
     right: auto;
   }
 
-  /* ── PÁGINAS ── */
+  /* ── PÁGINAS: cada .page es scrollable por sí mismo ── */
   .pages {
     position: relative;
     overflow: hidden;
@@ -129,33 +122,41 @@
   .page {
     position: absolute;
     inset: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    display: flex;
+    flex-direction: column;
   }
 
-  /* ── INVENTARIO: 2 columnas de categorías ── */
+  /* ── INVENTARIO ── */
+
+  /* Stats y controles se quedan fijos arriba (flex-shrink:0) */
+  .stats-strip,
+  .inv-controls {
+    flex-shrink: 0;
+  }
+
+  .stats-strip { padding: 10px 20px; }
+  .inv-controls { padding: 12px 20px; }
+
+  /* El grid de productos ocupa el resto del scroll */
   .inv-scroll {
     display: grid !important;
     grid-template-columns: 1fr 1fr;
     align-content: start;
     gap: 0 16px;
-    padding: 12px 20px 80px;
+    padding: 12px 20px 40px;
+    flex: 1;            /* ocupa el espacio restante */
+    overflow: visible;  /* el scroll lo maneja .page */
   }
 
   .cat-group {
     break-inside: avoid;
   }
 
-  .stats-strip { padding: 10px 20px; }
-  .inv-controls { padding: 12px 20px; }
-
   /* FAB scanner centrado en el área de contenido */
   .fab {
-    left: calc(220px + (100% - 220px) / 2);
     bottom: 20px;
-  }
-
-  /* Toast */
-  .toast {
-    bottom: 28px;
   }
 
   /* ── ADMIN: grid 2 col ── */
@@ -172,7 +173,7 @@
   }
 
   /* ── LABELS ── */
-  .lbl-ctrl { padding: 12px 20px; }
+  .lbl-ctrl { padding: 12px 20px; flex-shrink: 0; }
   .lbl-scroll { padding: 12px 20px 20px; }
   .lpg { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
   .lbl-fab { padding: 10px 20px; }
@@ -208,7 +209,7 @@
 
   .inv-scroll {
     grid-template-columns: 1fr 1fr 1fr;
-    padding: 14px 24px 80px;
+    padding: 14px 24px 40px;
   }
 
   .admin-scroll {
