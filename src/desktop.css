@@ -96,18 +96,11 @@
   .cat-group { break-inside: avoid; }
 
   /* ── ADMIN ── */
+  /* Admin ya tiene flex:1 + flex-direction:column en index.css, scroll funciona solo */
+  /* Solo aumentamos el padding para desktop, sin tocar display ni overflow */
   .admin-scroll {
-    /* Admin es hijo directo de .page (position:absolute;inset:0) → usar height:100% */
-    height: 100%;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 14px;
-    padding: 20px;
-    align-content: start;
+    padding: 20px 24px 40px;
   }
-  .admin-scroll > .admin-card:first-child { grid-column: 1 / -1; }
 
   /* ── LABELS ── */
   .lbl-ctrl   { padding: 12px 20px; flex-shrink: 0; }
