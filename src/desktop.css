@@ -97,6 +97,10 @@
 
   /* ── ADMIN ── */
   .admin-scroll {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 14px;
