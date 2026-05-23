@@ -160,18 +160,20 @@ export default function App() {
     <AppContext.Provider value={ctx}>
       <TopBar />
       <InstallBanner />
-      <div className="pages">
-        <div className={`page${page==='inv'?' active':''}`}><InventoryPage /></div>
-        <div className={`page${page==='lbl'?' active':''}`}><LabelsPage /></div>
-        <div className={`page${page==='admin'?' active':''}`}><AdminPage /></div>
-      </div>
-      {page === 'lbl' && labelSelected.size > 0 && (
-        <div className="lbl-fab">
-          <button className="lfab-clr" onClick={() => setLabelSelected(new Set())}>✕</button>
-          <button className="lfab-print" onClick={() => document.dispatchEvent(new CustomEvent('lbl-print'))}>🖨 Ver e imprimir</button>
+      <div className="main-layout">
+        <BottomNav />
+        <div className="pages">
+          <div className={`page${page==='inv'?' active':''}`}><InventoryPage /></div>
+          <div className={`page${page==='lbl'?' active':''}`}><LabelsPage /></div>
+          <div className={`page${page==='admin'?' active':''}`}><AdminPage /></div>
+          {page === 'lbl' && labelSelected.size > 0 && (
+            <div className="lbl-fab">
+              <button className="lfab-clr" onClick={() => setLabelSelected(new Set())}>✕</button>
+              <button className="lfab-print" onClick={() => document.dispatchEvent(new CustomEvent('lbl-print'))}>🖨 Ver e imprimir</button>
+            </div>
+          )}
         </div>
-      )}
-      <BottomNav />
+      </div>
       {scannerOpen && <Scanner />}
       {sheetData !== null && <BottomSheet />}
       {helpOpen && <HelpModal />}

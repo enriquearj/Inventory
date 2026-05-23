@@ -1,0 +1,221 @@
+/* ============================================================
+   G&Z LLC — Desktop Responsive Styles
+   Agrega soporte para pantallas ≥ 768px
+   ============================================================ */
+
+/* ── Base: main-layout es flex columna en mobile (sin cambios) ── */
+.main-layout {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* En mobile, el nav va abajo (orden normal) */
+.main-layout .bottom-nav { order: 2; }
+.main-layout .pages       { order: 1; flex: 1; min-height: 0; }
+
+/* ── 768px: tablet ── */
+@media (min-width: 768px) {
+  body {
+    max-width: 720px;
+  }
+}
+
+/* ── 1024px+: desktop layout ── */
+@media (min-width: 1024px) {
+
+  /* body y root ocupan toda la pantalla */
+  body {
+    max-width: 100%;
+    box-shadow: none;
+  }
+
+  #root {
+    max-width: 1440px;
+    margin: 0 auto;
+    width: 100%;
+  }
+
+  /* TopBar cubre todo el ancho */
+  .topbar {
+    padding: 0 28px;
+  }
+
+  /* main-layout en row: sidebar | contenido */
+  .main-layout {
+    flex-direction: row;
+  }
+
+  .main-layout .bottom-nav { order: 1; }
+  .main-layout .pages       { order: 2; flex: 1; min-width: 0; }
+
+  /* ── SIDEBAR ── */
+  .bottom-nav {
+    width: 220px;
+    flex-shrink: 0;
+    flex-direction: column;
+    height: 100%;
+    border-top: none;
+    border-right: 1px solid var(--bd);
+    background: var(--w);
+    padding: 20px 0;
+    gap: 4px;
+    box-shadow: none;
+    z-index: auto;
+    /* Logo / marca en la parte de arriba */
+    padding-top: 20px;
+  }
+
+  /* Ítem del nav lateral */
+  .nav-item {
+    flex: none;
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 12px;
+    padding: 11px 18px;
+    border-radius: 10px;
+    margin: 0 8px;
+    min-height: 44px;
+  }
+
+  .nav-item .ni {
+    font-size: 20px;
+    width: 26px;
+    flex-shrink: 0;
+    text-align: center;
+  }
+
+  .nav-item .nl {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--tx);
+    text-transform: none;
+    letter-spacing: 0;
+  }
+
+  .nav-item.active {
+    background: var(--al);
+  }
+
+  .nav-item.active .nl {
+    color: var(--ad);
+  }
+
+  .nav-item.active .ni {
+    transform: none;
+  }
+
+  /* Quitar barra verde de abajo */
+  .nav-item::after {
+    display: none;
+  }
+
+  /* Badge reposicionado */
+  .nav-badge {
+    position: static;
+    margin-left: auto;
+    top: auto;
+    right: auto;
+  }
+
+  /* ── PÁGINAS ── */
+  .pages {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .page {
+    position: absolute;
+    inset: 0;
+  }
+
+  /* ── INVENTARIO: 2 columnas de categorías ── */
+  .inv-scroll {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr;
+    align-content: start;
+    gap: 0 16px;
+    padding: 12px 20px 80px;
+  }
+
+  .cat-group {
+    break-inside: avoid;
+  }
+
+  .stats-strip { padding: 10px 20px; }
+  .inv-controls { padding: 12px 20px; }
+
+  /* FAB scanner centrado en el área de contenido */
+  .fab {
+    left: calc(220px + (100% - 220px) / 2);
+    bottom: 20px;
+  }
+
+  /* Toast */
+  .toast {
+    bottom: 28px;
+  }
+
+  /* ── ADMIN: grid 2 col ── */
+  .admin-scroll {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    padding: 20px;
+    align-content: start;
+  }
+
+  .admin-scroll > .admin-card:first-child {
+    grid-column: 1 / -1;
+  }
+
+  /* ── LABELS ── */
+  .lbl-ctrl { padding: 12px 20px; }
+  .lbl-scroll { padding: 12px 20px 20px; }
+  .lpg { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+  .lbl-fab { padding: 10px 20px; }
+
+  /* ── MODALES centrados en pantalla ── */
+  .modal-bg,
+  .help-bg {
+    align-items: center;
+    justify-content: center;
+  }
+
+  .modal-sheet {
+    max-width: 500px;
+    border-radius: 16px;
+  }
+
+  .help-sheet {
+    max-width: 540px;
+    max-height: 80vh;
+    border-radius: 16px;
+  }
+
+  .bsheet {
+    max-width: 500px;
+  }
+}
+
+/* ── 1280px+: pantallas grandes ── */
+@media (min-width: 1280px) {
+  .bottom-nav {
+    width: 240px;
+  }
+
+  .inv-scroll {
+    grid-template-columns: 1fr 1fr 1fr;
+    padding: 14px 24px 80px;
+  }
+
+  .admin-scroll {
+    grid-template-columns: 1fr 1fr 1fr;
+  }
+
+  .admin-scroll > .admin-card:first-child {
+    grid-column: 1 / -1;
+  }
+}
