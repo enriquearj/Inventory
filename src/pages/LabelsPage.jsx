@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import QRCode from 'qrcode'
 import { useApp } from '../App'
 
@@ -12,16 +12,6 @@ export default function LabelsPage() {
   const [previewOpen, setPreviewOpen] = useState(false)
   const [qrMap, setQrMap] = useState({})
   const [generating, setGenerating] = useState(false)
-  const printAreaRef = useRef(null)
-
-  // Pre-create printArea in body on mount so mobile browsers can render it before print
-  useEffect(() => {
-    const pa = document.createElement('div')
-    pa.className = 'print-area'
-    document.body.appendChild(pa)
-    printAreaRef.current = pa
-    return () => { if (document.body.contains(pa)) document.body.removeChild(pa) }
-  }, [])
 
   // Listen for print event from TopBar
   useEffect(() => {
@@ -89,26 +79,41 @@ export default function LabelsPage() {
     const selectedProducts = products.filter(p => selected.has(p.id))
     if (!selectedProducts.length || generating) return
 
-    const pa = printAreaRef.current
-    if (!pa) return
-
+    const cols = labelSize === 'md' ? 6 : 4
     const px = QR_PX[labelSize]
-    const grid = document.createElement('div')
-    grid.className = `ls ${labelSize}`
-    selectedProducts.forEach(p => {
-      const item = document.createElement('div')
-      item.className = 'lbl-item'
-      item.innerHTML = `<div class="lq"><img src="${qrMap[p.id] || ''}" width="${px}" height="${px}" alt="GYZ-${p.id}" /></div><div class="lc">GYZ-${p.id}</div>`
-      grid.appendChild(item)
-    })
-    pa.innerHTML = ''
-    pa.appendChild(grid)
 
-    const cleanup = () => { pa.innerHTML = ''; window.removeEventListener('afterprint', cleanup) }
-    window.addEventListener('afterprint', cleanup)
+    const labelsHtml = selectedProducts.map(p => `
+      <div class="lbl">
+        <img src="${qrMap[p.id] || ''}" width="${px}" height="${px}" alt="GYZ-${p.id}">
+        <div class="code">GYZ-${p.id}</div>
+      </div>`).join('')
 
+    const html = `<!DOCTYPE html>
+<html><head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Etiquetas G&amp;Z LLC</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{background:white;font-family:monospace}
+    .grid{display:grid;grid-template-columns:repeat(${cols},1fr);gap:2px;padding:8mm}
+    .lbl{border:.3mm solid #ccc;padding:1mm;display:flex;flex-direction:column;align-items:center;justify-content:center;break-inside:avoid;background:white}
+    .lbl img{display:block;width:${px}px;height:${px}px}
+    .code{font-size:8px;font-weight:700;text-align:center;margin-top:2px;letter-spacing:.5px}
+    @media print{@page{size:letter;margin:8mm}body{background:white}}
+  </style>
+</head>
+<body>
+  <div class="grid">${labelsHtml}</div>
+  <script>window.addEventListener('load',function(){setTimeout(function(){window.print()},300)})<\/script>
+</body></html>`
+
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const win = window.open(url, '_blank')
+    if (!win) { showToast('⚠️ Activa ventanas emergentes para imprimir'); return }
+    setTimeout(() => URL.revokeObjectURL(url), 60000)
     setPreviewOpen(false)
-    setTimeout(() => window.print(), 200)
   }
 
   const catsToShow = activeCat === 'all' ? categories : categories.filter(c => c.id === activeCat)
