@@ -2,7 +2,6 @@
    G&Z LLC — Desktop Responsive Styles
    ============================================================ */
 
-/* ── Base: main-layout flex columna en mobile ── */
 .main-layout {
   display: flex;
   flex-direction: column;
@@ -24,11 +23,7 @@
 
   body { max-width: 100%; box-shadow: none; }
 
-  #root {
-    max-width: 1440px;
-    margin: 0 auto;
-    width: 100%;
-  }
+  #root { max-width: 1440px; margin: 0 auto; width: 100%; }
 
   .topbar { padding: 0 28px; }
 
@@ -71,26 +66,31 @@
   .nav-item::after     { display: none; }
   .nav-badge           { position: static; margin-left: auto; top: auto; right: auto; }
 
-  /* ── PÁGINAS
-     .page ya tiene position:absolute; inset:0; overflow-y:auto desde index.css
-     NO redefinir display — solo ajustar padding/layout interno
-  ── */
+  /* ── PÁGINAS — NO tocar display, el base ya maneja show/hide ── */
   .pages { position: relative; overflow: hidden; }
 
-  /* ── INVENTARIO ── */
-  .stats-strip  { padding: 10px 20px; }
-  .inv-controls { padding: 12px 20px; }
+  /* ── INVENTARIO
+     .page es position:absolute; inset:0; display:flex; flex-direction:column
+     Necesitamos que .inv-scroll sea el que scrollee igual que .lbl-scroll:
+       lbl-scroll = flex:1; min-height:0; overflow-y:auto  ← esto funciona
+       inv-scroll = flex:1; display:flex  ← no tiene overflow, rompemos con grid
+     Solución: hacer que inv-scroll se comporte igual que lbl-scroll
+  ── */
+  .stats-strip  { padding: 10px 20px; flex-shrink: 0; }
+  .inv-controls { padding: 12px 20px; flex-shrink: 0; }
 
-  /* Grid de productos — ocupa todo el ancho disponible y scrollea con .page */
   .inv-scroll {
+    /* Igual que .lbl-scroll: flex:1 + min-height:0 + overflow-y:auto */
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    /* Grid de 2 columnas en lugar de flex-column */
     display: grid !important;
     grid-template-columns: 1fr 1fr;
     align-content: start;
     gap: 0 16px;
     padding: 12px 20px 40px;
-    /* IMPORTANTE: no flex-shrink, no overflow — dejar que .page maneje el scroll */
-    flex: none;
-    width: 100%;
   }
 
   .cat-group { break-inside: avoid; }
@@ -103,11 +103,10 @@
     padding: 20px;
     align-content: start;
   }
-
   .admin-scroll > .admin-card:first-child { grid-column: 1 / -1; }
 
   /* ── LABELS ── */
-  .lbl-ctrl   { padding: 12px 20px; }
+  .lbl-ctrl   { padding: 12px 20px; flex-shrink: 0; }
   .lbl-scroll { padding: 12px 20px 20px; }
   .lpg        { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
   .lbl-fab    { padding: 10px 20px; }
