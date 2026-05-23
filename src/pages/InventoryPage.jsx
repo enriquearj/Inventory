@@ -10,7 +10,6 @@ export default function InventoryPage() {
 
   const counted = Object.keys(counts).filter(k => counts[k] > 0).length
   const totalUnits = Object.values(counts).reduce((a, b) => a + (b || 0), 0)
-  const pct = Math.round((counted / Math.max(1, products.length)) * 100)
   const activeCatCount = new Set(
     Object.keys(counts).filter(k => counts[k] > 0)
       .map(k => products.find(p => p.id == k)?.category_id).filter(Boolean)
@@ -29,12 +28,11 @@ export default function InventoryPage() {
           <div className="ssep" />
           <div className="sp"><div className="sv">{totalUnits}</div><div className="sl">Unidades</div></div>
           <div className="ssep" />
-          <div className="sp"><div className="sv">{pct}%</div><div className="sl">Porcentaje</div></div>
+          <div className="sp"><div className="sv">{products.length}</div><div className="sl">Productos</div></div>
           <div className="ssep" />
           <div className="sp"><div className="sv">{activeCatCount}</div><div className="sl">Categ.</div></div>
         </div>
       </div>
-      <div className="pbar"><div className="pfill" style={{ width: `${pct}%` }} /></div>
 
       {/* Controls */}
       <div className="inv-controls">

@@ -90,16 +90,17 @@ export default function App() {
   }, [])
 
   const importProducts = useCallback(async (newProducts, newCats, mode) => {
+    const check = ({ error }) => { if (error) throw new Error(error.message) }
     if (mode === 'replace') {
-      await supabase.from('inventory_counts').delete().neq('product_id', 0)
-      await supabase.from('products').delete().neq('id', 0)
-      await supabase.from('categories').delete().neq('id', '')
-      await supabase.from('categories').insert(newCats)
-      await supabase.from('products').insert(newProducts)
+      check(await supabase.from('inventory_counts').delete().gte('product_id', 0))
+      check(await supabase.from('products').delete().gte('id', 0))
+      check(await supabase.from('categories').delete().neq('id', ''))
+      if (newCats.length) check(await supabase.from('categories').insert(newCats))
+      if (newProducts.length) check(await supabase.from('products').insert(newProducts))
       setCounts({})
     } else {
-      for (const cat of newCats) await supabase.from('categories').upsert(cat, { onConflict: 'id' })
-      for (const prod of newProducts) await supabase.from('products').upsert(prod, { onConflict: 'id' })
+      for (const cat of newCats) check(await supabase.from('categories').upsert(cat, { onConflict: 'id' }))
+      for (const prod of newProducts) check(await supabase.from('products').upsert(prod, { onConflict: 'id' }))
     }
     await loadData()
   }, [loadData])

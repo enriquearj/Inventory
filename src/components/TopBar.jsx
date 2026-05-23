@@ -1,14 +1,16 @@
+import { useState } from 'react'
 import { useApp } from '../App'
 
 export default function TopBar() {
   const { page, setPage, counts, products, exportCsv, resetCounts, showToast, setHelpOpen } = useApp()
+  const [showClearModal, setShowClearModal] = useState(false)
 
   const countedCount = Object.keys(counts).filter(k => counts[k] > 0).length
 
   return (
+    <>
     <div className="topbar">
       <div className="brand">
-        <div className="brand-badge">G&Z</div>
         <div>
           <div className="brand-name">G&Z LLC</div>
           <div className="brand-sub">Sistema de Almacén</div>
@@ -20,7 +22,7 @@ export default function TopBar() {
           <>
             <button className="tbtn danger" onClick={() => {
               if (countedCount === 0) { showToast('⚠️ No hay conteos que limpiar'); return }
-              if (confirm(`¿Limpiar ${countedCount} conteos?`)) resetCounts().then(() => showToast('✅ Conteos limpiados'))
+              setShowClearModal(true)
             }}>
               🗑 Limpiar
             </button>
@@ -39,5 +41,23 @@ export default function TopBar() {
         )}
       </div>
     </div>
+
+    {/* Clear Counts Modal */}
+    {showClearModal && (
+      <div className="modal-bg open" onClick={() => setShowClearModal(false)}>
+        <div className="modal-sheet" onClick={e => e.stopPropagation()}>
+          <h3>⚠️ Limpiar conteos</h3>
+          <p>Se borrarán todas las cantidades del inventario. No se elimina el catálogo.</p>
+          <div className="modal-btns">
+            <button className="mbtn mbtn-c" onClick={() => setShowClearModal(false)}>Cancelar</button>
+            <button className="mbtn mbtn-d" onClick={() => {
+              resetCounts().then(() => showToast('✅ Conteos limpiados'))
+              setShowClearModal(false)
+            }}>Limpiar todo</button>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   )
 }

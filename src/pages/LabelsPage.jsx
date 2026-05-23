@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import QRCode from 'qrcode'
 import { useApp } from '../App'
 
@@ -12,6 +12,16 @@ export default function LabelsPage() {
   const [previewOpen, setPreviewOpen] = useState(false)
   const [qrMap, setQrMap] = useState({})
   const [generating, setGenerating] = useState(false)
+  const printAreaRef = useRef(null)
+
+  // Pre-create printArea in body on mount so mobile browsers can render it before print
+  useEffect(() => {
+    const pa = document.createElement('div')
+    pa.className = 'print-area'
+    document.body.appendChild(pa)
+    printAreaRef.current = pa
+    return () => { if (document.body.contains(pa)) document.body.removeChild(pa) }
+  }, [])
 
   // Listen for print event from TopBar
   useEffect(() => {
@@ -79,29 +89,22 @@ export default function LabelsPage() {
     const selectedProducts = products.filter(p => selected.has(p.id))
     if (!selectedProducts.length || generating) return
 
-    // Append directly to <body> so the print CSS rule
-    // "body > *:not(.print-area) { display:none }" works correctly.
-    // (#root is hidden; this sibling div with .print-area is shown.)
-    const printDiv = document.createElement('div')
-    printDiv.className = 'print-area'
+    const pa = printAreaRef.current
+    if (!pa) return
 
+    const px = QR_PX[labelSize]
     const grid = document.createElement('div')
     grid.className = `ls ${labelSize}`
     selectedProducts.forEach(p => {
-      const px = QR_PX[labelSize]
       const item = document.createElement('div')
       item.className = 'lbl-item'
       item.innerHTML = `<div class="lq"><img src="${qrMap[p.id] || ''}" width="${px}" height="${px}" alt="GYZ-${p.id}" /></div><div class="lc">GYZ-${p.id}</div>`
       grid.appendChild(item)
     })
-    printDiv.appendChild(grid)
-    document.body.appendChild(printDiv)
+    pa.innerHTML = ''
+    pa.appendChild(grid)
 
-    // Clean up after the print dialog closes
-    const cleanup = () => {
-      if (document.body.contains(printDiv)) document.body.removeChild(printDiv)
-      window.removeEventListener('afterprint', cleanup)
-    }
+    const cleanup = () => { pa.innerHTML = ''; window.removeEventListener('afterprint', cleanup) }
     window.addEventListener('afterprint', cleanup)
 
     setPreviewOpen(false)
@@ -142,9 +145,14 @@ export default function LabelsPage() {
 
       {/* Selection bar */}
       <div className={`lsel-bar${selected.size === 0 ? ' h' : ''}`}>
-        <span>{selected.size} etiqueta{selected.size !== 1 ? 's' : ''} seleccionada{selected.size !== 1 ? 's' : ''}</span>
-        <span className="lsl" onClick={selectAll}>Todo</span>
-        <span className="lsl" onClick={clearAll}>Limpiar</span>
+        <div className="lsel-info">
+          <span className="lsel-count">{selected.size}</span>
+          <span className="lsel-label">etiqueta{selected.size !== 1 ? 's' : ''} seleccionada{selected.size !== 1 ? 's' : ''}</span>
+        </div>
+        <div className="lsel-actions">
+          <button className="lsel-btn lsel-btn-all" onClick={selectAll}>✓ Todo</button>
+          <button className="lsel-btn lsel-btn-clear" onClick={clearAll}>✕ Limpiar</button>
+        </div>
       </div>
 
       {/* Product grid */}
