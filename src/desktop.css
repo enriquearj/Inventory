@@ -97,8 +97,8 @@
 
   /* ── ADMIN ── */
   .admin-scroll {
-    flex: 1;
-    min-height: 0;
+    /* Admin es hijo directo de .page (position:absolute;inset:0) → usar height:100% */
+    height: 100%;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
     display: grid;
