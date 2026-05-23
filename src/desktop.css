@@ -1,9 +1,8 @@
 /* ============================================================
    G&Z LLC — Desktop Responsive Styles
-   Agrega soporte para pantallas ≥ 768px
    ============================================================ */
 
-/* ── Base: main-layout es flex columna en mobile (sin cambios) ── */
+/* ── Base: main-layout flex columna en mobile (sin cambios) ── */
 .main-layout {
   display: flex;
   flex-direction: column;
@@ -12,18 +11,15 @@
   overflow: hidden;
 }
 
-/* En mobile, el nav va abajo (orden normal) */
 .main-layout .bottom-nav { order: 2; }
 .main-layout .pages       { order: 1; flex: 1; min-height: 0; }
 
 /* ── 768px: tablet ── */
 @media (min-width: 768px) {
-  body {
-    max-width: 720px;
-  }
+  body { max-width: 720px; }
 }
 
-/* ── 1024px+: desktop layout ── */
+/* ── 1024px+: desktop ── */
 @media (min-width: 1024px) {
 
   body {
@@ -37,11 +33,9 @@
     width: 100%;
   }
 
-  .topbar {
-    padding: 0 28px;
-  }
+  .topbar { padding: 0 28px; }
 
-  /* main-layout en row: sidebar | contenido */
+  /* main-layout en fila: sidebar | contenido */
   .main-layout {
     flex-direction: row;
   }
@@ -90,21 +84,10 @@
     letter-spacing: 0;
   }
 
-  .nav-item.active {
-    background: var(--al);
-  }
-
-  .nav-item.active .nl {
-    color: var(--ad);
-  }
-
-  .nav-item.active .ni {
-    transform: none;
-  }
-
-  .nav-item::after {
-    display: none;
-  }
+  .nav-item.active    { background: var(--al); }
+  .nav-item.active .nl { color: var(--ad); }
+  .nav-item.active .ni { transform: none; }
+  .nav-item::after    { display: none; }
 
   .nav-badge {
     position: static;
@@ -113,53 +96,40 @@
     right: auto;
   }
 
-  /* ── PÁGINAS: cada .page es scrollable por sí mismo ── */
+  /* ── PÁGINAS
+     NO tocar .page { display } — el CSS base ya maneja show/hide.
+     Solo aseguramos que .page.active tenga scroll propio.
+  ── */
   .pages {
     position: relative;
     overflow: hidden;
   }
 
-  .page {
-    position: absolute;
-    inset: 0;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
+  /* La página activa es flex-column y scrollea internamente */
+  .page.active {
     display: flex;
     flex-direction: column;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
   /* ── INVENTARIO ── */
+  .stats-strip  { padding: 10px 20px; flex-shrink: 0; }
+  .inv-controls { padding: 12px 20px; flex-shrink: 0; }
 
-  /* Stats y controles se quedan fijos arriba (flex-shrink:0) */
-  .stats-strip,
-  .inv-controls {
-    flex-shrink: 0;
-  }
-
-  .stats-strip { padding: 10px 20px; }
-  .inv-controls { padding: 12px 20px; }
-
-  /* El grid de productos ocupa el resto del scroll */
+  /* Grid de 2 columnas — scroll lo maneja .page.active */
   .inv-scroll {
     display: grid !important;
     grid-template-columns: 1fr 1fr;
     align-content: start;
     gap: 0 16px;
     padding: 12px 20px 40px;
-    flex: 1;            /* ocupa el espacio restante */
-    overflow: visible;  /* el scroll lo maneja .page */
+    flex-shrink: 0; /* no competir con flex padre */
   }
 
-  .cat-group {
-    break-inside: avoid;
-  }
+  .cat-group { break-inside: avoid; }
 
-  /* FAB scanner centrado en el área de contenido */
-  .fab {
-    bottom: 20px;
-  }
-
-  /* ── ADMIN: grid 2 col ── */
+  /* ── ADMIN ── */
   .admin-scroll {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -173,50 +143,30 @@
   }
 
   /* ── LABELS ── */
-  .lbl-ctrl { padding: 12px 20px; flex-shrink: 0; }
+  .lbl-ctrl   { padding: 12px 20px; flex-shrink: 0; }
   .lbl-scroll { padding: 12px 20px 20px; }
-  .lpg { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
-  .lbl-fab { padding: 10px 20px; }
+  .lpg        { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+  .lbl-fab    { padding: 10px 20px; }
 
-  /* ── MODALES centrados en pantalla ── */
-  .modal-bg,
-  .help-bg {
+  /* ── MODALES centrados ── */
+  .modal-bg, .help-bg {
     align-items: center;
     justify-content: center;
   }
-
-  .modal-sheet {
-    max-width: 500px;
-    border-radius: 16px;
-  }
-
-  .help-sheet {
-    max-width: 540px;
-    max-height: 80vh;
-    border-radius: 16px;
-  }
-
-  .bsheet {
-    max-width: 500px;
-  }
+  .modal-sheet { max-width: 500px; border-radius: 16px; }
+  .help-sheet  { max-width: 540px; max-height: 80vh; border-radius: 16px; }
+  .bsheet      { max-width: 500px; }
 }
 
 /* ── 1280px+: pantallas grandes ── */
 @media (min-width: 1280px) {
-  .bottom-nav {
-    width: 240px;
-  }
+  .bottom-nav { width: 240px; }
 
   .inv-scroll {
     grid-template-columns: 1fr 1fr 1fr;
     padding: 14px 24px 40px;
   }
 
-  .admin-scroll {
-    grid-template-columns: 1fr 1fr 1fr;
-  }
-
-  .admin-scroll > .admin-card:first-child {
-    grid-column: 1 / -1;
-  }
+  .admin-scroll { grid-template-columns: 1fr 1fr 1fr; }
+  .admin-scroll > .admin-card:first-child { grid-column: 1 / -1; }
 }
