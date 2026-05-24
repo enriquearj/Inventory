@@ -160,12 +160,13 @@ export default function App() {
     <AppContext.Provider value={ctx}>
       <TopBar />
       <InstallBanner />
-      <div className="main-layout">
-        <BottomNav />
-        <div className="pages">
-          <div className={`page${page==='inv'?' active':''}`}><InventoryPage /></div>
-          <div className={`page${page==='lbl'?' active':''}`}><LabelsPage /></div>
-          <div className={`page${page==='admin'?' active':''}`}><AdminPage /></div>
+      <div className="app-body">
+        <div className="content-area">
+          <div className="pages">
+            <div className={`page${page==='inv'?' active':''}`}><InventoryPage /></div>
+            <div className={`page${page==='lbl'?' active':''}`}><LabelsPage /></div>
+            <div className={`page${page==='admin'?' active':''}`}><AdminPage /></div>
+          </div>
           {page === 'lbl' && labelSelected.size > 0 && (
             <div className="lbl-fab">
               <button className="lfab-clr" onClick={() => setLabelSelected(new Set())}>✕</button>
@@ -173,6 +174,7 @@ export default function App() {
             </div>
           )}
         </div>
+        <BottomNav />
       </div>
       {scannerOpen && <Scanner />}
       {sheetData !== null && <BottomSheet />}

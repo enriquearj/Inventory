@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useApp } from '../App'
 
 export default function InventoryPage() {
@@ -7,6 +7,14 @@ export default function InventoryPage() {
   const [activeCat, setActiveCat] = useState('all')
   const [collapsed, setCollapsed] = useState({})
   const [inlineEdit, setInlineEdit] = useState(null) // productId being edited inline
+  const [inlineEditValue, setInlineEditValue] = useState(0)
+  const searchRef = useRef(null)
+
+  useEffect(() => {
+    const handler = () => setTimeout(() => searchRef.current?.focus(), 80)
+    document.addEventListener('inv-focus-search', handler)
+    return () => document.removeEventListener('inv-focus-search', handler)
+  }, [])
 
   const counted = Object.keys(counts).filter(k => counts[k] > 0).length
   const totalUnits = Object.values(counts).reduce((a, b) => a + (b || 0), 0)
@@ -41,6 +49,7 @@ export default function InventoryPage() {
             <span className="sicon">🔍</span>
             <input className="sinput" type="search" placeholder="Buscar producto..."
               value={search} onChange={e => setSearch(e.target.value)}
+              ref={searchRef}
               autoComplete="off" autoCorrect="off" spellCheck={false} />
           </div>
         </div>
@@ -91,26 +100,60 @@ export default function InventoryPage() {
                         <div className="imeta">{cat.name} · GYZ-{p.id}</div>
                       </div>
                       <div className="counter">
-                        <button className="cbtn cminus" onPointerDown={e => { e.preventDefault(); updateCount(p.id, Math.max(0, q - 1)) }}>−</button>
+                        <button className="cbtn cminus" onPointerDown={e => {
+                          e.preventDefault()
+                          if (inlineEdit === p.id) {
+                            const next = Math.max(0, inlineEditValue - 1)
+                            setInlineEditValue(next)
+                            updateCount(p.id, next)
+                          } else {
+                            updateCount(p.id, Math.max(0, q - 1))
+                          }
+                        }}>−</button>
                         {inlineEdit === p.id ? (
                           <div className="cinwrap on">
-                            <input className="cinput" type="number" min="0" inputMode="numeric"
-                              defaultValue={q}
+                            <input className="cinput" type="text" inputMode="numeric" pattern="[0-9]*"
+                              value={inlineEditValue}
                               autoFocus
                               onChange={e => {
-                                const v = parseInt(e.target.value)
-                                if (!isNaN(v) && v >= 0) updateCount(p.id, v)
+                                const raw = e.target.value.replace(/[^0-9]/g, '')
+                                const next = raw === '' ? 0 : parseInt(raw)
+                                setInlineEditValue(next)
+                                updateCount(p.id, next)
                               }}
                               onBlur={() => setInlineEdit(null)}
-                              onKeyDown={e => { if (e.key === 'Enter') e.target.blur() }}
+                              onKeyDown={e => {
+                                if (e.key === 'Enter') { e.target.blur(); return }
+                                if (e.key === '-' || e.key === 'ArrowDown') {
+                                  e.preventDefault()
+                                  const next = Math.max(0, inlineEditValue - 1)
+                                  setInlineEditValue(next)
+                                  updateCount(p.id, next)
+                                }
+                                if (e.key === '+' || e.key === 'ArrowUp') {
+                                  e.preventDefault()
+                                  const next = inlineEditValue + 1
+                                  setInlineEditValue(next)
+                                  updateCount(p.id, next)
+                                }
+                              }}
                             />
                           </div>
                         ) : (
-                          <div className={`cdisp${q > 0 ? ' v' : ' z'}`} onClick={() => setInlineEdit(p.id)}>
+                          <div className={`cdisp${q > 0 ? ' v' : ' z'}`} onClick={() => { setInlineEdit(p.id); setInlineEditValue(q) }}>
                             {q || '·'}
                           </div>
                         )}
-                        <button className="cbtn cplus" onPointerDown={e => { e.preventDefault(); updateCount(p.id, q + 1) }}>+</button>
+                        <button className="cbtn cplus" onPointerDown={e => {
+                          e.preventDefault()
+                          if (inlineEdit === p.id) {
+                            const next = inlineEditValue + 1
+                            setInlineEditValue(next)
+                            updateCount(p.id, next)
+                          } else {
+                            updateCount(p.id, q + 1)
+                          }
+                        }}>+</button>
                       </div>
                     </div>
                   )

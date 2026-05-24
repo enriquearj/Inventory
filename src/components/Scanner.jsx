@@ -104,7 +104,7 @@ export default function Scanner() {
       )}
       <div className="scan-hint">
         <p>Apunta al código QR o barras del producto</p>
-        <button className="scan-manbtn" onClick={() => { stopCamera(); setScannerOpen(false) }}>
+        <button className="scan-manbtn" onClick={() => { stopCamera(); setScannerOpen(false); document.dispatchEvent(new CustomEvent('inv-focus-search')) }}>
           ✏️ Buscar manual
         </button>
       </div>
