@@ -19,6 +19,12 @@ export default function DamagedPage() {
     return () => el.removeEventListener('wheel', onWheel)
   }, [])
 
+  useEffect(() => {
+    const handler = () => setTimeout(() => searchRef.current?.focus(), 80)
+    document.addEventListener('inv-focus-search', handler)
+    return () => document.removeEventListener('inv-focus-search', handler)
+  }, [])
+
   const counted = Object.keys(damagedCounts).filter(k => damagedCounts[k] > 0).length
   const totalUnits = Object.values(damagedCounts).reduce((a, b) => a + (b || 0), 0)
   const activeCatCount = new Set(
