@@ -6,12 +6,14 @@ export default function BottomNav() {
   const countedCount = Object.keys(counts).filter(k => counts[k] > 0).length
   const damagedCount = Object.keys(damagedCounts).filter(k => damagedCounts[k] > 0).length
   const totalUnits = Object.values(counts).reduce((a, b) => a + (b || 0), 0)
+  const totalDamagedUnits = Object.values(damagedCounts).reduce((a, b) => a + (b || 0), 0)
   const pct = products.length > 0 ? Math.round((countedCount / products.length) * 100) : 0
   const activeCats = new Set(
     Object.keys(counts).filter(k => counts[k] > 0)
       .map(k => products.find(p => p.id == k)?.category_id).filter(Boolean)
   ).size
-  const avg = countedCount > 0 ? Math.round(totalUnits / countedCount) : 0
+  const avg = countedCount > 0 ? (totalUnits / countedCount).toFixed(1) : '0'
+  const pending = products.length - countedCount
 
   return (
     <nav className="bottom-nav">
@@ -40,20 +42,45 @@ export default function BottomNav() {
         <span className="nl">Admin</span>
       </button>
       <div className="sidebar-stats">
-        <div className="ss-title">Progreso</div>
-        <div className="ss-pct">{pct}%</div>
-        <div className="ss-bar"><div className="ss-bar-fill" style={{ width: `${pct}%` }} /></div>
+        {/* ── Progreso ── */}
+        <div className="ss-section-title">📦 Inventario</div>
+        <div className="ss-pct-row">
+          <span className="ss-pct">{pct}%</span>
+          <span className="ss-pct-sub">{countedCount} de {products.length}</span>
+        </div>
+        <div className="ss-bar">
+          <div className="ss-bar-fill" style={{ width: `${pct}%` }} />
+        </div>
         <div className="ss-row">
-          <span className="ss-k">Productos</span>
+          <span className="ss-k">✅ Contados</span>
           <span className="ss-v">{countedCount}<span className="ss-of">/{products.length}</span></span>
         </div>
         <div className="ss-row">
-          <span className="ss-k">Categorías</span>
-          <span className="ss-v">{activeCats}<span className="ss-of">/{categories.length}</span></span>
+          <span className="ss-k">⏳ Pendientes</span>
+          <span className={`ss-v${pending > 0 ? ' ss-pending' : ''}`}>{pending}</span>
         </div>
         <div className="ss-row">
-          <span className="ss-k">Promedio</span>
+          <span className="ss-k">📊 Unidades</span>
+          <span className="ss-v">{totalUnits}</span>
+        </div>
+        <div className="ss-row">
+          <span className="ss-k">⌀ Promedio</span>
           <span className="ss-v">{avg}<span className="ss-of"> u/p</span></span>
+        </div>
+        <div className="ss-row">
+          <span className="ss-k">🗂 Categorías</span>
+          <span className="ss-v">{activeCats}<span className="ss-of">/{categories.length}</span></span>
+        </div>
+        {/* ── Dañados ── */}
+        <div className="ss-sep" />
+        <div className="ss-section-title ss-dmg-title">⚠️ Dañados</div>
+        <div className="ss-row">
+          <span className="ss-k">Productos</span>
+          <span className={`ss-v${damagedCount > 0 ? ' ss-dmg-v' : ''}`}>{damagedCount}<span className="ss-of">/{products.length}</span></span>
+        </div>
+        <div className="ss-row">
+          <span className="ss-k">Unidades</span>
+          <span className={`ss-v${totalDamagedUnits > 0 ? ' ss-dmg-v' : ''}`}>{totalDamagedUnits}</span>
         </div>
       </div>
     </nav>
