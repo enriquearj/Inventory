@@ -1,9 +1,10 @@
 import { useApp } from '../App'
 
 export default function BottomNav() {
-  const { page, setPage, counts, products, categories, labelSelected } = useApp()
+  const { page, setPage, counts, damagedCounts, products, categories, labelSelected } = useApp()
 
   const countedCount = Object.keys(counts).filter(k => counts[k] > 0).length
+  const damagedCount = Object.keys(damagedCounts).filter(k => damagedCounts[k] > 0).length
   const totalUnits = Object.values(counts).reduce((a, b) => a + (b || 0), 0)
   const pct = products.length > 0 ? Math.round((countedCount / products.length) * 100) : 0
   const activeCats = new Set(
@@ -23,7 +24,13 @@ export default function BottomNav() {
         <span className="nl">Inventario</span>
         <span className={`nav-badge${countedCount > 0 ? ' show' : ''}`}>{countedCount || ''}</span>
       </button>
-      <button className={`nav-item${page === 'lbl' ? ' active' : ''}`} onClick={() => setPage('lbl')}>
+      <button className={`nav-item${page === 'dmg' ? ' active' : ''}`} onClick={() => setPage('dmg')}>
+        <span className="ni">⚠️</span>
+        <span className="nl">Dañados</span>
+        <span className={`nav-badge${damagedCount > 0 ? ' show' : ''}`}
+          style={{ background: '#ea580c' }}>{damagedCount || ''}</span>
+      </button>
+	  <button className={`nav-item${page === 'lbl' ? ' active' : ''}`} onClick={() => setPage('lbl')}>
         <span className="ni">🏷</span>
         <span className="nl">Etiquetas</span>
         <span className={`nav-badge${labelSelected.size > 0 ? ' show' : ''}`}>{labelSelected.size || ''}</span>

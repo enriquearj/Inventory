@@ -2,10 +2,12 @@ import { useState } from 'react'
 import { useApp } from '../App'
 
 export default function TopBar() {
-  const { page, setPage, counts, products, exportCsv, resetCounts, showToast, setHelpOpen } = useApp()
+  const { page, setPage, counts, damagedCounts, products, exportCsv, exportDamagedXlsx, resetCounts, resetDamagedCounts, showToast, setHelpOpen } = useApp()
   const [showClearModal, setShowClearModal] = useState(false)
+  const [showDmgClearModal, setShowDmgClearModal] = useState(false)
 
   const countedCount = Object.keys(counts).filter(k => counts[k] > 0).length
+  const damagedCount = Object.keys(damagedCounts).filter(k => damagedCounts[k] > 0).length
 
   return (
     <>
@@ -27,6 +29,17 @@ export default function TopBar() {
               🗑 Limpiar
             </button>
             <button className="tbtn green" onClick={exportCsv}>⬇ Excel</button>
+          </>
+        )}
+        {page === 'dmg' && (
+          <>
+            <button className="tbtn danger" onClick={() => {
+              if (damagedCount === 0) { showToast('⚠️ No hay defectuosos que limpiar'); return }
+              setShowDmgClearModal(true)
+            }}>
+              🗑 Limpiar
+            </button>
+            <button className="tbtn green" onClick={exportDamagedXlsx}>⬇ Excel</button>
           </>
         )}
         {page === 'lbl' && (
@@ -53,6 +66,23 @@ export default function TopBar() {
             <button className="mbtn mbtn-d" onClick={() => {
               resetCounts().then(() => showToast('✅ Conteos limpiados'))
               setShowClearModal(false)
+            }}>Limpiar todo</button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* Clear Damaged Modal */}
+    {showDmgClearModal && (
+      <div className="modal-bg open" onClick={() => setShowDmgClearModal(false)}>
+        <div className="modal-sheet" onClick={e => e.stopPropagation()}>
+          <h3>⚠️ Limpiar defectuosos</h3>
+          <p>Se borrarán todos los conteos de productos dañados.</p>
+          <div className="modal-btns">
+            <button className="mbtn mbtn-c" onClick={() => setShowDmgClearModal(false)}>Cancelar</button>
+            <button className="mbtn mbtn-d" onClick={() => {
+              resetDamagedCounts().then(() => showToast('✅ Defectuosos limpiados'))
+              setShowDmgClearModal(false)
             }}>Limpiar todo</button>
           </div>
         </div>

@@ -1,4 +1,5 @@
 ﻿import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react'
+import * as XLSX from 'xlsx'
 import { supabase } from './supabase'
 import { DEFAULT_CATS, DEFAULT_PRODUCTS } from './defaultData'
 import TopBar from './components/TopBar'
@@ -11,6 +12,7 @@ import InstallBanner from './components/InstallBanner'
 import InventoryPage from './pages/InventoryPage'
 import LabelsPage from './pages/LabelsPage'
 import AdminPage from './pages/AdminPage'
+import DamagedPage from './pages/DamagedPage'
 
 export const AppContext = createContext(null)
 export const useApp = () => useContext(AppContext)
@@ -20,6 +22,7 @@ export default function App() {
   const [categories, setCategories] = useState([])
   const [products, setProducts] = useState([])
   const [counts, setCounts] = useState({})
+  const [damagedCounts, setDamagedCounts] = useState({})
   const [loading, setLoading] = useState(true)
   const [toast, setToast] = useState(null)
   const [scannerOpen, setScannerOpen] = useState(false)
@@ -31,10 +34,11 @@ export default function App() {
   const loadData = useCallback(async () => {
     setLoading(true)
     try {
-      const [catsRes, prodsRes, countsRes] = await Promise.all([
+      const [catsRes, prodsRes, countsRes, damagedRes] = await Promise.all([
         supabase.from('categories').select('*').order('name'),
         supabase.from('products').select('*').order('id'),
         supabase.from('inventory_counts').select('product_id, quantity'),
+        supabase.from('damaged_counts').select('product_id, quantity'),
       ])
       let cats = catsRes.data
       let prods = prodsRes.data
@@ -52,6 +56,11 @@ export default function App() {
         const map = {}
         countsRes.data.forEach(r => { if (r.quantity > 0) map[r.product_id] = r.quantity })
         setCounts(map)
+      }
+      if (damagedRes.data) {
+        const map = {}
+        damagedRes.data.forEach(r => { if (r.quantity > 0) map[r.product_id] = r.quantity })
+        setDamagedCounts(map)
       }
     } catch (err) { console.error('Error loading data:', err) }
     setLoading(false)
@@ -72,6 +81,19 @@ export default function App() {
     return () => { supabase.removeChannel(channel) }
   }, [])
 
+  useEffect(() => {
+    const channel = supabase.channel('damaged_realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'damaged_counts' }, payload => {
+        if (payload.eventType === 'DELETE') {
+          setDamagedCounts(prev => { const next = { ...prev }; delete next[payload.old.product_id]; return next })
+        } else {
+          const { product_id, quantity } = payload.new
+          setDamagedCounts(prev => { const next = { ...prev }; if (quantity > 0) next[product_id] = quantity; else delete next[product_id]; return next })
+        }
+      }).subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [])
+
   const updateCount = useCallback(async (productId, quantity) => {
     setCounts(prev => { const next = { ...prev }; if (quantity <= 0) delete next[productId]; else next[productId] = quantity; return next })
     if (quantity <= 0) {
@@ -87,6 +109,23 @@ export default function App() {
   const resetCounts = useCallback(async () => {
     setCounts({})
     await supabase.from('inventory_counts').delete().neq('product_id', 0)
+  }, [])
+
+  const updateDamagedCount = useCallback(async (productId, quantity) => {
+    setDamagedCounts(prev => { const next = { ...prev }; if (quantity <= 0) delete next[productId]; else next[productId] = quantity; return next })
+    if (quantity <= 0) {
+      await supabase.from('damaged_counts').delete().eq('product_id', productId)
+    } else {
+      await supabase.from('damaged_counts').upsert(
+        { product_id: productId, quantity, updated_at: new Date().toISOString() },
+        { onConflict: 'product_id' }
+      )
+    }
+  }, [])
+
+  const resetDamagedCounts = useCallback(async () => {
+    setDamagedCounts({})
+    await supabase.from('damaged_counts').delete().neq('product_id', 0)
   }, [])
 
   const importProducts = useCallback(async (newProducts, newCats, mode) => {
@@ -121,30 +160,71 @@ export default function App() {
     toastTimer.current = setTimeout(() => setToast(null), duration)
   }, [])
 
+  const exportDamagedXlsx = useCallback(() => {
+    const entries = Object.entries(damagedCounts).filter(([, q]) => q > 0)
+    if (!entries.length) { showToast('⚠️ No hay defectuosos registrados'); return }
+    const d = new Date()
+    const rows = [
+      ['G&Z LLC — Inventario Defectuosos'],
+      [`Fecha: ${d.toLocaleDateString('es-US')}`, `Hora: ${d.toLocaleTimeString('es-US', { hour: '2-digit', minute: '2-digit' })}`],
+      [],
+      ['#', 'Código', 'Producto', 'Categoría', 'Cantidad']
+    ]
+    let i = 1
+    categories.forEach(cat => {
+      products.filter(p => p.category_id === cat.id && (damagedCounts[p.id] || 0) > 0)
+        .forEach(p => rows.push([i++, `GYZ-${p.id}`, p.name, cat.name, damagedCounts[p.id]]))
+    })
+    rows.push([], ['', '', 'TOTAL', '', Object.values(damagedCounts).reduce((a, b) => a + (b || 0), 0)])
+    const ws = XLSX.utils.aoa_to_sheet(rows)
+    ws['!cols'] = [{ wch: 4 }, { wch: 10 }, { wch: 35 }, { wch: 20 }, { wch: 10 }]
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, 'Defectuosos')
+    const data = XLSX.write(wb, { bookType: 'xlsx', type: 'array' })
+    const blob = new Blob([data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url; a.download = `GYZ_defectuosos_${d.toISOString().slice(0, 10)}.xlsx`
+    document.body.appendChild(a); a.click(); document.body.removeChild(a)
+    setTimeout(() => URL.revokeObjectURL(url), 1000)
+    showToast(`✅ Exportado: ${i - 1} productos`)
+  }, [damagedCounts, categories, products, showToast])
+
   const exportCsv = useCallback(() => {
     const entries = Object.entries(counts).filter(([, q]) => q > 0)
     if (!entries.length) { showToast('⚠️ No hay cantidades registradas'); return }
     const d = new Date()
-    const rows = [['G&Z LLC — Inventario'], [`Fecha: ${d.toLocaleDateString('es-US')}`, `Hora: ${d.toLocaleTimeString('es-US',{hour:'2-digit',minute:'2-digit'})}`], [],
-      ['#','Código','Producto','Categoría','Cantidad']]
+    const rows = [
+      ['G&Z LLC — Inventario'],
+      [`Fecha: ${d.toLocaleDateString('es-US')}`, `Hora: ${d.toLocaleTimeString('es-US',{hour:'2-digit',minute:'2-digit'})}`],
+      [],
+      ['#','Código','Producto','Categoría','Cantidad']
+    ]
     let i = 1
     categories.forEach(cat => {
       products.filter(p => p.category_id === cat.id && (counts[p.id]||0) > 0)
         .forEach(p => rows.push([i++, `GYZ-${p.id}`, p.name, cat.name, counts[p.id]]))
     })
     rows.push([],['','','TOTAL','',Object.values(counts).reduce((a,b)=>a+(b||0),0)])
-    const csv = '\uFEFF' + rows.map(r=>r.map(x=>{const s=String(x??'');return s.includes(',')?`"${s}"`:s}).join(',')).join('\n')
-    const blob = new Blob([csv], { type: 'text/csv' })
+    const ws = XLSX.utils.aoa_to_sheet(rows)
+    ws['!cols'] = [{ wch: 4 }, { wch: 10 }, { wch: 35 }, { wch: 20 }, { wch: 10 }]
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, 'Inventario')
+    const data = XLSX.write(wb, { bookType: 'xlsx', type: 'array' })
+    const blob = new Blob([data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
     const url = URL.createObjectURL(blob)
-    const a = document.createElement('a'); a.href=url; a.download=`GYZ_inventario_${d.toISOString().slice(0,10)}.csv`; a.click(); URL.revokeObjectURL(url)
+    const a = document.createElement('a')
+    a.href = url; a.download = `GYZ_inventario_${d.toISOString().slice(0,10)}.xlsx`
+    document.body.appendChild(a); a.click(); document.body.removeChild(a)
+    setTimeout(() => URL.revokeObjectURL(url), 1000)
     showToast(`✅ Exportado: ${i-1} productos`)
   }, [counts, categories, products, showToast])
 
   const ctx = {
-    categories, setCategories, products, setProducts, counts, loading,
-    updateCount, resetCounts, importProducts, restoreCatalog,
+    categories, setCategories, products, setProducts, counts, damagedCounts, loading,
+    updateCount, resetCounts, updateDamagedCount, resetDamagedCounts, importProducts, restoreCatalog,
     showToast, scannerOpen, setScannerOpen, sheetData, setSheetData,
-    exportCsv, loadData, page, setPage,
+    exportCsv, exportDamagedXlsx, loadData, page, setPage,
     labelSelected, setLabelSelected,
     helpOpen, setHelpOpen,
   }
@@ -166,6 +246,7 @@ export default function App() {
             <div className={`page${page==='inv'?' active':''}`}><InventoryPage /></div>
             <div className={`page${page==='lbl'?' active':''}`}><LabelsPage /></div>
             <div className={`page${page==='admin'?' active':''}`}><AdminPage /></div>
+            <div className={`page${page==='dmg'?' active':''}`}><DamagedPage /></div>
           </div>
           {page === 'lbl' && labelSelected.size > 0 && (
             <div className="lbl-fab">

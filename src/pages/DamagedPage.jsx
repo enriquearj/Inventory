@@ -1,12 +1,12 @@
 import { useState, useRef, useEffect } from 'react'
 import { useApp } from '../App'
 
-export default function InventoryPage() {
-  const { categories, products, counts, updateCount, setScannerOpen, setSheetData, showToast } = useApp()
+export default function DamagedPage() {
+  const { categories, products, damagedCounts, updateDamagedCount, setScannerOpen } = useApp()
   const [search, setSearch] = useState('')
   const [activeCat, setActiveCat] = useState('all')
   const [collapsed, setCollapsed] = useState({})
-  const [inlineEdit, setInlineEdit] = useState(null) // productId being edited inline
+  const [inlineEdit, setInlineEdit] = useState(null)
   const [inlineEditValue, setInlineEditValue] = useState(0)
   const searchRef = useRef(null)
   const pillsRef = useRef(null)
@@ -19,16 +19,10 @@ export default function InventoryPage() {
     return () => el.removeEventListener('wheel', onWheel)
   }, [])
 
-  useEffect(() => {
-    const handler = () => setTimeout(() => searchRef.current?.focus(), 80)
-    document.addEventListener('inv-focus-search', handler)
-    return () => document.removeEventListener('inv-focus-search', handler)
-  }, [])
-
-  const counted = Object.keys(counts).filter(k => counts[k] > 0).length
-  const totalUnits = Object.values(counts).reduce((a, b) => a + (b || 0), 0)
+  const counted = Object.keys(damagedCounts).filter(k => damagedCounts[k] > 0).length
+  const totalUnits = Object.values(damagedCounts).reduce((a, b) => a + (b || 0), 0)
   const activeCatCount = new Set(
-    Object.keys(counts).filter(k => counts[k] > 0)
+    Object.keys(damagedCounts).filter(k => damagedCounts[k] > 0)
       .map(k => products.find(p => p.id == k)?.category_id).filter(Boolean)
   ).size
 
@@ -41,13 +35,25 @@ export default function InventoryPage() {
       {/* Stats */}
       <div className="stats-strip">
         <div className="sstrip" style={{ flex: 1 }}>
-          <div className="sp"><div className="sv">{counted}</div><div className="sl">Contados</div></div>
+          <div className="sp">
+            <div className="sv" style={{ color: '#fb923c' }}>{counted}</div>
+            <div className="sl">Contados</div>
+          </div>
           <div className="ssep" />
-          <div className="sp"><div className="sv">{totalUnits}</div><div className="sl">Unidades</div></div>
+          <div className="sp">
+            <div className="sv" style={{ color: '#fb923c' }}>{totalUnits}</div>
+            <div className="sl">Unidades</div>
+          </div>
           <div className="ssep" />
-          <div className="sp"><div className="sv">{products.length}</div><div className="sl">Productos</div></div>
+          <div className="sp">
+            <div className="sv" style={{ color: '#fb923c' }}>{products.length}</div>
+            <div className="sl">Productos</div>
+          </div>
           <div className="ssep" />
-          <div className="sp"><div className="sv">{activeCatCount}</div><div className="sl">Categ.</div></div>
+          <div className="sp">
+            <div className="sv" style={{ color: '#fb923c' }}>{activeCatCount}</div>
+            <div className="sl">Categ.</div>
+          </div>
         </div>
       </div>
 
@@ -63,11 +69,11 @@ export default function InventoryPage() {
           </div>
         </div>
         <div className="cat-pills" ref={pillsRef}>
-          <Pill label="Todos" active={activeCat === 'all'} color="#0f172a"
+          <Pill label="Todos" active={activeCat === 'all'} color="#ea580c"
             onClick={() => setActiveCat('all')} />
           <Pill
-            label={`✅ Actualizados${counted ? ` (${counted})` : ''}`}
-            active={activeCat === 'updated'} color="#16a34a"
+            label={`⚠️ Registrados${counted ? ` (${counted})` : ''}`}
+            active={activeCat === 'updated'} color="#ea580c"
             onClick={() => setActiveCat('updated')} />
           {categories.filter(c => products.some(p => p.category_id === c.id)).map(cat => (
             <Pill key={cat.id} label={`${cat.emoji} ${cat.name}`}
@@ -81,13 +87,13 @@ export default function InventoryPage() {
       <div className="inv-scroll">
         {catsToShow.map(cat => {
           let items = products.filter(p => p.category_id === cat.id)
-          if (activeCat === 'updated') items = items.filter(p => (counts[p.id] || 0) > 0)
+          if (activeCat === 'updated') items = items.filter(p => (damagedCounts[p.id] || 0) > 0)
           if (search) {
             const q = search.toLowerCase()
             items = items.filter(p => p.name.toLowerCase().includes(q) || `gyz-${p.id}`.includes(q))
           }
           if (!items.length) return null
-          const catCounted = items.filter(p => (counts[p.id] || 0) > 0).length
+          const catCounted = items.filter(p => (damagedCounts[p.id] || 0) > 0).length
           const isCol = collapsed[cat.id] && !search
 
           return (
@@ -95,14 +101,17 @@ export default function InventoryPage() {
               <div className="cat-hdr" onClick={() => setCollapsed(prev => ({ ...prev, [cat.id]: !prev[cat.id] }))}>
                 <div className="cdot" style={{ background: cat.color }} />
                 <div className="ctitle">{cat.emoji} {cat.name}</div>
-                <div className={`ccnt${catCounted > 0 ? ' hi' : ''}`}>{catCounted}/{items.length}</div>
+                <div className={`ccnt${catCounted > 0 ? ' hi' : ''}`}
+                  style={catCounted > 0 ? { background: '#ffedd5', color: '#ea580c' } : {}}>
+                  {catCounted}/{items.length}
+                </div>
                 <div className="cchev">▾</div>
               </div>
               <div className="items-list">
                 {items.map(p => {
-                  const q = counts[p.id] || 0
+                  const q = damagedCounts[p.id] || 0
                   return (
-                    <div key={p.id} className={`icard${q > 0 ? ' counted' : ''}`}>
+                    <div key={p.id} className={`icard${q > 0 ? ' dmg-counted' : ''}`}>
                       <div className="ibar" />
                       <div className="iinfo">
                         <div className="iname">{p.name}</div>
@@ -114,9 +123,9 @@ export default function InventoryPage() {
                           if (inlineEdit === p.id) {
                             const next = Math.max(0, inlineEditValue - 1)
                             setInlineEditValue(next)
-                            updateCount(p.id, next)
+                            updateDamagedCount(p.id, next)
                           } else {
-                            updateCount(p.id, Math.max(0, q - 1))
+                            updateDamagedCount(p.id, Math.max(0, q - 1))
                           }
                         }}>−</button>
                         {inlineEdit === p.id ? (
@@ -124,11 +133,12 @@ export default function InventoryPage() {
                             <input className="cinput" type="text" inputMode="numeric" pattern="[0-9]*"
                               value={inlineEditValue}
                               autoFocus
+                              style={{ borderColor: '#ea580c', color: '#c2410c' }}
                               onChange={e => {
                                 const raw = e.target.value.replace(/[^0-9]/g, '')
                                 const next = raw === '' ? 0 : parseInt(raw)
                                 setInlineEditValue(next)
-                                updateCount(p.id, next)
+                                updateDamagedCount(p.id, next)
                               }}
                               onBlur={() => setInlineEdit(null)}
                               onKeyDown={e => {
@@ -137,32 +147,36 @@ export default function InventoryPage() {
                                   e.preventDefault()
                                   const next = Math.max(0, inlineEditValue - 1)
                                   setInlineEditValue(next)
-                                  updateCount(p.id, next)
+                                  updateDamagedCount(p.id, next)
                                 }
                                 if (e.key === '+' || e.key === 'ArrowUp') {
                                   e.preventDefault()
                                   const next = inlineEditValue + 1
                                   setInlineEditValue(next)
-                                  updateCount(p.id, next)
+                                  updateDamagedCount(p.id, next)
                                 }
                               }}
                             />
                           </div>
                         ) : (
-                          <div className={`cdisp${q > 0 ? ' v' : ' z'}`} onClick={() => { setInlineEdit(p.id); setInlineEditValue(q) }}>
+                          <div className={`cdisp${q > 0 ? ' v' : ' z'}`}
+                            style={q > 0 ? { color: '#c2410c' } : {}}
+                            onClick={() => { setInlineEdit(p.id); setInlineEditValue(q) }}>
                             {q || '·'}
                           </div>
                         )}
-                        <button className="cbtn cplus" onPointerDown={e => {
-                          e.preventDefault()
-                          if (inlineEdit === p.id) {
-                            const next = inlineEditValue + 1
-                            setInlineEditValue(next)
-                            updateCount(p.id, next)
-                          } else {
-                            updateCount(p.id, q + 1)
-                          }
-                        }}>+</button>
+                        <button className="cbtn cplus"
+                          style={{ background: '#ffedd5', color: '#ea580c' }}
+                          onPointerDown={e => {
+                            e.preventDefault()
+                            if (inlineEdit === p.id) {
+                              const next = inlineEditValue + 1
+                              setInlineEditValue(next)
+                              updateDamagedCount(p.id, next)
+                            } else {
+                              updateDamagedCount(p.id, q + 1)
+                            }
+                          }}>+</button>
                       </div>
                     </div>
                   )
@@ -173,7 +187,7 @@ export default function InventoryPage() {
         })}
         {catsToShow.every(cat => {
           let items = products.filter(p => p.category_id === cat.id)
-          if (activeCat === 'updated') items = items.filter(p => (counts[p.id] || 0) > 0)
+          if (activeCat === 'updated') items = items.filter(p => (damagedCounts[p.id] || 0) > 0)
           if (search) { const q = search.toLowerCase(); items = items.filter(p => p.name.toLowerCase().includes(q)) }
           return items.length === 0
         }) && (
@@ -186,7 +200,7 @@ export default function InventoryPage() {
 
       {/* Scanner FAB */}
       <div className="fab">
-        <button className="fab-scan" onClick={() => setScannerOpen(true)}>
+        <button className="fab-scan" style={{ background: '#ea580c' }} onClick={() => setScannerOpen(true)}>
           <span>📷</span>
           <span>Escanear código</span>
         </button>

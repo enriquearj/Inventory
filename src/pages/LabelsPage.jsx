@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import QRCode from 'qrcode'
 import { useApp } from '../App'
 
@@ -12,6 +12,15 @@ export default function LabelsPage() {
   const [previewOpen, setPreviewOpen] = useState(false)
   const [qrMap, setQrMap] = useState({})
   const [generating, setGenerating] = useState(false)
+  const pillsRef = useRef(null)
+
+  useEffect(() => {
+    const el = pillsRef.current
+    if (!el) return
+    const onWheel = e => { if (e.deltaY === 0) return; e.preventDefault(); el.scrollLeft += e.deltaY }
+    el.addEventListener('wheel', onWheel, { passive: false })
+    return () => el.removeEventListener('wheel', onWheel)
+  }, [])
 
   // Listen for print event from TopBar
   useEffect(() => {
@@ -134,7 +143,7 @@ export default function LabelsPage() {
             <button className={`stbtn${labelSize === 'lg' ? ' active' : ''}`} onClick={() => setLabelSize('lg')}>Grd</button>
           </div>
         </div>
-        <div className="cat-pills">
+        <div className="cat-pills" ref={pillsRef}>
           <div className={`cpill${activeCat === 'all' ? ' active' : ''}`}
             style={activeCat === 'all' ? { background: '#0f172a' } : {}}
             onClick={() => setActiveCat('all')}>Todos</div>

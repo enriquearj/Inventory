@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import * as XLSX from 'xlsx'
 import { useApp } from '../App'
 import { CAT_COLORS, CAT_EMOJIS } from '../defaultData'
+import { supabase } from '../supabase'
 
 export default function AdminPage() {
   const { categories, products, counts, importProducts, resetCounts, restoreCatalog, showToast, loadData } = useApp()
@@ -16,6 +17,21 @@ export default function AdminPage() {
   const [showRestoreModal, setShowRestoreModal] = useState(false)
   const [importing, setImporting] = useState(false)
   const [dragging, setDragging] = useState(false)
+
+  // Category / Product CRUD
+  const [expandedCat, setExpandedCat] = useState(null)
+  const [editingCat, setEditingCat] = useState(null)
+  const [editCatDraft, setEditCatDraft] = useState({ name: '', emoji: '📦', color: CAT_COLORS[0] })
+  const [deletingCat, setDeletingCat] = useState(null)
+  const [editingProd, setEditingProd] = useState(null)
+  const [editProdDraft, setEditProdDraft] = useState({ name: '', category_id: '' })
+  const [deletingProd, setDeletingProd] = useState(null)
+  const [addingProdCat, setAddingProdCat] = useState(null)
+  const [newProdName, setNewProdName] = useState('')
+  const [addingCat, setAddingCat] = useState(false)
+  const [newCatDraft, setNewCatDraft] = useState({ name: '', emoji: '📦', color: CAT_COLORS[0] })
+  const [emojiOpen, setEmojiOpen] = useState(null)
+  const [saving, setSaving] = useState(false)
   const fileInputRef = useRef(null)
 
   // Listen for template download from TopBar
@@ -27,6 +43,19 @@ export default function AdminPage() {
 
   const catalogDate = new Date().toLocaleDateString('es-US')
 
+  function saveXlsx(wb, filename) {
+    const data = XLSX.write(wb, { bookType: 'xlsx', type: 'array' })
+    const blob = new Blob([data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = filename
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    setTimeout(() => URL.revokeObjectURL(url), 1000)
+  }
+
   function downloadTemplate() {
     const rows = [
       ['Codigo', 'Nombre', 'Categoria'],
@@ -35,12 +64,11 @@ export default function AdminPage() {
       ["GYZ-13", 'Mango Tommy #1', 'Mangos'],
       ['', 'Nuevo Producto Ejemplo', 'Otros'],
     ]
-    const csv = '\uFEFF' + rows.map(r => r.map(x => {
-      const s = String(x ?? ''); return s.includes(',') ? `"${s}"` : s
-    }).join(',')).join('\n')
-    const blob = new Blob([csv], { type: 'text/csv' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a'); a.href = url; a.download = 'Plantilla_GYZ_productos.csv'; a.click(); URL.revokeObjectURL(url)
+    const ws = XLSX.utils.aoa_to_sheet(rows)
+    ws['!cols'] = [{ wch: 12 }, { wch: 35 }, { wch: 25 }]
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, 'Plantilla')
+    saveXlsx(wb, 'Plantilla_GYZ_productos.xlsx')
   }
 
   function exportCatalog() {
@@ -50,10 +78,11 @@ export default function AdminPage() {
         rows.push([`GYZ-${p.id}`, p.name, cat.name])
       })
     })
-    const csv = '\uFEFF' + rows.map(r => r.join(',')).join('\n')
-    const blob = new Blob([csv], { type: 'text/csv' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a'); a.href = url; a.download = 'GYZ_catalogo.csv'; a.click(); URL.revokeObjectURL(url)
+    const ws = XLSX.utils.aoa_to_sheet(rows)
+    ws['!cols'] = [{ wch: 12 }, { wch: 35 }, { wch: 25 }]
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, 'Catalogo')
+    saveXlsx(wb, 'GYZ_catalogo.xlsx')
   }
 
   function handleFile(file) {
@@ -156,6 +185,68 @@ export default function AdminPage() {
     setFileHeaders([]); setFileRows([]); setColMap({ name: -1, category: -1, code: -1 })
     setUploadStatus(null); setPendingProds(null); setPendingCats(null)
     if (fileInputRef.current) fileInputRef.current.value = ''
+  }
+
+  // ── Category CRUD ────────────────────────────────────────
+  async function saveCatEdit() {
+    if (!editCatDraft.name.trim()) { showToast('⚠️ El nombre no puede estar vacío'); return }
+    setSaving(true)
+    const { error } = await supabase.from('categories')
+      .update({ name: editCatDraft.name.trim(), emoji: editCatDraft.emoji, color: editCatDraft.color })
+      .eq('id', editingCat)
+    if (error) showToast('❌ ' + error.message)
+    else { showToast('✅ Categoría actualizada'); setEditingCat(null); await loadData() }
+    setSaving(false)
+  }
+
+  async function deleteCat(id) {
+    setSaving(true)
+    const { error } = await supabase.from('categories').delete().eq('id', id)
+    if (error) showToast('❌ ' + error.message)
+    else { showToast('✅ Categoría eliminada'); setDeletingCat(null); setExpandedCat(null); await loadData() }
+    setSaving(false)
+  }
+
+  async function addNewCat() {
+    if (!newCatDraft.name.trim()) { showToast('⚠️ El nombre no puede estar vacío'); return }
+    const safeId = newCatDraft.name.toLowerCase().replace(/[^a-z0-9]/g, '_').slice(0, 20) + '_' + Date.now().toString().slice(-4)
+    setSaving(true)
+    const { error } = await supabase.from('categories')
+      .insert({ id: safeId, name: newCatDraft.name.trim(), emoji: newCatDraft.emoji, color: newCatDraft.color })
+    if (error) showToast('❌ ' + error.message)
+    else { showToast('✅ Categoría creada'); setAddingCat(false); setNewCatDraft({ name: '', emoji: '📦', color: CAT_COLORS[0] }); await loadData() }
+    setSaving(false)
+  }
+
+  // ── Product CRUD ─────────────────────────────────────────
+  async function saveProdEdit() {
+    if (!editProdDraft.name.trim()) { showToast('⚠️ El nombre no puede estar vacío'); return }
+    setSaving(true)
+    const { error } = await supabase.from('products')
+      .update({ name: editProdDraft.name.trim(), category_id: editProdDraft.category_id })
+      .eq('id', editingProd)
+    if (error) showToast('❌ ' + error.message)
+    else { showToast('✅ Producto actualizado'); setEditingProd(null); await loadData() }
+    setSaving(false)
+  }
+
+  async function deleteProd(id) {
+    setSaving(true)
+    const { error } = await supabase.from('products').delete().eq('id', id)
+    if (error) showToast('❌ ' + error.message)
+    else { showToast('✅ Producto eliminado'); setDeletingProd(null); await loadData() }
+    setSaving(false)
+  }
+
+  async function addNewProd(catId) {
+    if (!newProdName.trim()) { showToast('⚠️ El nombre no puede estar vacío'); return }
+    const nextId = Math.max(0, ...products.map(p => p.id)) + 1
+    setSaving(true)
+    const { error } = await supabase.from('products')
+      .insert({ id: nextId, name: newProdName.trim(), category_id: catId })
+    if (error) showToast('❌ ' + error.message)
+    else { showToast('✅ Producto agregado'); setAddingProdCat(null); setNewProdName(''); await loadData() }
+    setSaving(false)
   }
 
   const previewRows = pendingProds ? pendingProds.slice(0, 20) : []
@@ -304,21 +395,191 @@ export default function AdminPage() {
       <div className="admin-card">
         <div className="admin-card-hdr">
           <div className="admin-card-icon" style={{ background: '#fef9c3' }}>🏷</div>
-          <div>
+          <div style={{ flex: 1 }}>
             <div className="admin-card-title">Gestionar Categorías</div>
-            <div className="admin-card-sub">Categorías activas en el catálogo</div>
+            <div className="admin-card-sub">{categories.length} categorías · {products.length} productos</div>
           </div>
         </div>
-        <div className="admin-card-body">
-          {categories.filter(c => products.some(p => p.category_id === c.id)).map(cat => (
-            <div key={cat.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 0', borderBottom: '1px solid var(--bd)' }}>
-              <div style={{ width: 10, height: 10, borderRadius: '50%', background: cat.color, flexShrink: 0 }} />
-              <div style={{ flex: 1, fontSize: 13, fontWeight: 600 }}>{cat.emoji} {cat.name}</div>
-              <div style={{ fontSize: 11, color: 'var(--mu)', fontFamily: 'monospace' }}>
-                {products.filter(p => p.category_id === cat.id).length} prods
+        <div className="admin-card-body" style={{ padding: '4px 16px 14px' }}>
+
+          {/* Click-outside backdrop for emoji picker */}
+          {emojiOpen && <div style={{ position: 'fixed', inset: 0, zIndex: 199 }} onClick={() => setEmojiOpen(null)} />}
+
+          {categories.map(cat => {
+            const catProds = products.filter(p => p.category_id === cat.id)
+            const isExpanded = expandedCat === cat.id
+            const isEditing = editingCat === cat.id
+            const isDeleting = deletingCat === cat.id
+
+            return (
+              <div key={cat.id}>
+                {isEditing ? (
+                  /* ── Inline category edit ── */
+                  <div style={{ padding: '10px 0', borderBottom: '1px solid var(--bd)' }}>
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginBottom: 8 }}>
+                      <div style={{ position: 'relative', zIndex: 200 }}>
+                        <button className="emoji-pick-btn" onClick={() => setEmojiOpen(emojiOpen === cat.id ? null : cat.id)}>
+                          {editCatDraft.emoji} <span style={{ fontSize: 9, color: 'var(--mu)' }}>▾</span>
+                        </button>
+                        {emojiOpen === cat.id && (
+                          <div className="emoji-drop">
+                            {CAT_EMOJIS.map(e => (
+                              <button key={e} className={`emoji-opt${editCatDraft.emoji === e ? ' sel' : ''}`}
+                                onClick={() => { setEditCatDraft(d => ({ ...d, emoji: e })); setEmojiOpen(null) }}>{e}</button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      <input className="cmgr-inline-input" value={editCatDraft.name} autoFocus
+                        placeholder="Nombre de categoría"
+                        onChange={e => setEditCatDraft(d => ({ ...d, name: e.target.value }))}
+                        onKeyDown={e => { if (e.key === 'Enter') saveCatEdit(); if (e.key === 'Escape') setEditingCat(null) }} />
+                    </div>
+                    <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginBottom: 10 }}>
+                      {CAT_COLORS.map(c => (
+                        <div key={c} className="cswatch"
+                          style={{ background: c, border: `2.5px solid ${editCatDraft.color === c ? '#fff' : 'transparent'}`, boxShadow: editCatDraft.color === c ? `0 0 0 2px ${c}` : 'none', transform: editCatDraft.color === c ? 'scale(1.2)' : 'scale(1)' }}
+                          onClick={() => setEditCatDraft(d => ({ ...d, color: c }))} />
+                      ))}
+                    </div>
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      <button className="abtn abtn-outline" style={{ padding: '7px 12px', fontSize: 12 }} onClick={() => setEditingCat(null)}>✕ Cancelar</button>
+                      <button className="abtn abtn-green" style={{ padding: '7px 12px', fontSize: 12 }} onClick={saveCatEdit} disabled={saving}>{saving ? '⏳' : '✓ Guardar'}</button>
+                    </div>
+                  </div>
+                ) : isDeleting ? (
+                  /* ── Delete confirmation ── */
+                  <div className="cmgr-confirm">
+                    <div className="cmgr-confirm-msg">⚠️ ¿Eliminar "{cat.name}" y sus {catProds.length} productos?</div>
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      <button className="cmgr-btn-no" onClick={() => setDeletingCat(null)}>Cancelar</button>
+                      <button className="cmgr-btn-yes" onClick={() => deleteCat(cat.id)} disabled={saving}>{saving ? '⏳' : 'Sí, eliminar'}</button>
+                    </div>
+                  </div>
+                ) : (
+                  /* ── Normal category row ── */
+                  <div className="cmgr-row" style={{ borderBottom: isExpanded ? 'none' : '1px solid var(--bd)' }}>
+                    <div style={{ width: 10, height: 10, borderRadius: '50%', background: cat.color, flexShrink: 0 }} />
+                    <span style={{ flex: 1, fontSize: 13, fontWeight: 600 }}>{cat.emoji} {cat.name}</span>
+                    <span style={{ fontSize: 11, color: 'var(--mu)', fontFamily: 'monospace', marginRight: 2 }}>{catProds.length} prods</span>
+                    <button className="cmgr-icon-btn" title="Editar categoría"
+                      onClick={() => { setEditingCat(cat.id); setEditCatDraft({ name: cat.name, emoji: cat.emoji, color: cat.color }); setDeletingCat(null) }}>✏️</button>
+                    <button className="cmgr-icon-btn del" title="Eliminar categoría"
+                      onClick={() => { setDeletingCat(cat.id); setEditingCat(null) }}>🗑</button>
+                    <button className="cmgr-icon-btn" onClick={() => setExpandedCat(isExpanded ? null : cat.id)}
+                      style={{ fontSize: 12, transition: 'transform .2s', transform: isExpanded ? 'rotate(180deg)' : 'none' }}>▾</button>
+                  </div>
+                )}
+
+                {/* ── Expanded products list ── */}
+                {isExpanded && !isEditing && !isDeleting && (
+                  <div className="cmgr-prods">
+                    {catProds.map(prod => {
+                      const isProdEditing = editingProd === prod.id
+                      const isProdDeleting = deletingProd === prod.id
+                      return (
+                        <div key={prod.id} className="cmgr-prod-row">
+                          {isProdEditing ? (
+                            <div style={{ display: 'flex', gap: 8, alignItems: 'center', flex: 1, flexWrap: 'wrap', padding: '4px 0' }}>
+                              <input className="cmgr-inline-input" value={editProdDraft.name} autoFocus
+                                placeholder="Nombre del producto" style={{ minWidth: 120 }}
+                                onChange={e => setEditProdDraft(d => ({ ...d, name: e.target.value }))}
+                                onKeyDown={e => { if (e.key === 'Enter') saveProdEdit(); if (e.key === 'Escape') setEditingProd(null) }} />
+                              <select className="cmgr-inline-input" style={{ flex: 'none', width: 'auto', padding: '6px 8px' }}
+                                value={editProdDraft.category_id}
+                                onChange={e => setEditProdDraft(d => ({ ...d, category_id: e.target.value }))}>
+                                {categories.map(c => <option key={c.id} value={c.id}>{c.emoji} {c.name}</option>)}
+                              </select>
+                              <div style={{ display: 'flex', gap: 4 }}>
+                                <button className="cmgr-icon-btn" style={{ color: 'var(--danger)' }} onClick={() => setEditingProd(null)}>✕</button>
+                                <button className="cmgr-icon-btn" style={{ color: 'var(--accent)' }} onClick={saveProdEdit} disabled={saving}>✓</button>
+                              </div>
+                            </div>
+                          ) : isProdDeleting ? (
+                            <div className="cmgr-confirm" style={{ flex: 1, margin: 0, padding: '8px 10px' }}>
+                              <div className="cmgr-confirm-msg">¿Eliminar "{prod.name}"?</div>
+                              <div style={{ display: 'flex', gap: 6 }}>
+                                <button className="cmgr-btn-no" onClick={() => setDeletingProd(null)}>No</button>
+                                <button className="cmgr-btn-yes" onClick={() => deleteProd(prod.id)} disabled={saving}>{saving ? '⏳' : 'Sí'}</button>
+                              </div>
+                            </div>
+                          ) : (
+                            <>
+                              <span style={{ fontSize: 10, color: 'var(--mu)', fontFamily: 'monospace', flexShrink: 0, minWidth: 48 }}>GYZ-{prod.id}</span>
+                              <span style={{ flex: 1, fontSize: 13, fontWeight: 600, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{prod.name}</span>
+                              <button className="cmgr-icon-btn" title="Editar producto"
+                                onClick={() => { setEditingProd(prod.id); setEditProdDraft({ name: prod.name, category_id: prod.category_id }); setDeletingProd(null) }}>✏️</button>
+                              <button className="cmgr-icon-btn del" title="Eliminar producto"
+                                onClick={() => { setDeletingProd(prod.id); setEditingProd(null) }}>🗑</button>
+                            </>
+                          )}
+                        </div>
+                      )
+                    })}
+
+                    {/* Add product inline */}
+                    {addingProdCat === cat.id ? (
+                      <div style={{ display: 'flex', gap: 8, alignItems: 'center', padding: '8px 0', flexWrap: 'wrap' }}>
+                        <input className="cmgr-inline-input" value={newProdName} autoFocus placeholder="Nombre del nuevo producto"
+                          onChange={e => setNewProdName(e.target.value)}
+                          onKeyDown={e => { if (e.key === 'Enter') addNewProd(cat.id); if (e.key === 'Escape') { setAddingProdCat(null); setNewProdName('') } }} />
+                        <div style={{ display: 'flex', gap: 4 }}>
+                          <button className="cmgr-icon-btn" style={{ color: 'var(--danger)' }} onClick={() => { setAddingProdCat(null); setNewProdName('') }}>✕</button>
+                          <button className="cmgr-icon-btn" style={{ color: 'var(--accent)' }} onClick={() => addNewProd(cat.id)} disabled={saving}>✓</button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button className="cmgr-add-btn"
+                        onClick={() => { setAddingProdCat(cat.id); setNewProdName(''); setEditingProd(null); setDeletingProd(null) }}>
+                        <span style={{ fontSize: 16, lineHeight: 1 }}>＋</span> Agregar producto
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            )
+          })}
+
+          {/* ── Add new category ── */}
+          {addingCat ? (
+            <div style={{ padding: '12px 0 4px', borderTop: '1px solid var(--bd)', marginTop: 4 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--mu)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.8px' }}>Nueva categoría</div>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginBottom: 8 }}>
+                <div style={{ position: 'relative', zIndex: 200 }}>
+                  <button className="emoji-pick-btn" onClick={() => setEmojiOpen(emojiOpen === 'new' ? null : 'new')}>
+                    {newCatDraft.emoji} <span style={{ fontSize: 9, color: 'var(--mu)' }}>▾</span>
+                  </button>
+                  {emojiOpen === 'new' && (
+                    <div className="emoji-drop">
+                      {CAT_EMOJIS.map(e => (
+                        <button key={e} className={`emoji-opt${newCatDraft.emoji === e ? ' sel' : ''}`}
+                          onClick={() => { setNewCatDraft(d => ({ ...d, emoji: e })); setEmojiOpen(null) }}>{e}</button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <input className="cmgr-inline-input" value={newCatDraft.name} autoFocus placeholder="Nombre de la categoría"
+                  onChange={e => setNewCatDraft(d => ({ ...d, name: e.target.value }))}
+                  onKeyDown={e => { if (e.key === 'Enter') addNewCat(); if (e.key === 'Escape') setAddingCat(false) }} />
+              </div>
+              <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginBottom: 10 }}>
+                {CAT_COLORS.map(c => (
+                  <div key={c} className="cswatch"
+                    style={{ background: c, border: `2.5px solid ${newCatDraft.color === c ? '#fff' : 'transparent'}`, boxShadow: newCatDraft.color === c ? `0 0 0 2px ${c}` : 'none', transform: newCatDraft.color === c ? 'scale(1.2)' : 'scale(1)' }}
+                    onClick={() => setNewCatDraft(d => ({ ...d, color: c }))} />
+                ))}
+              </div>
+              <div style={{ display: 'flex', gap: 6 }}>
+                <button className="abtn abtn-outline" style={{ padding: '7px 12px', fontSize: 12 }} onClick={() => setAddingCat(false)}>✕ Cancelar</button>
+                <button className="abtn abtn-green" style={{ padding: '7px 12px', fontSize: 12 }} onClick={addNewCat} disabled={saving}>{saving ? '⏳' : '＋ Crear categoría'}</button>
               </div>
             </div>
-          ))}
+          ) : (
+            <button className="cmgr-add-btn" style={{ paddingTop: 12, borderTop: '1px solid var(--bd)', marginTop: 4 }}
+              onClick={() => { setAddingCat(true); setNewCatDraft({ name: '', emoji: '📦', color: CAT_COLORS[0] }) }}>
+              <span style={{ fontSize: 16, lineHeight: 1 }}>＋</span> Nueva categoría
+            </button>
+          )}
         </div>
       </div>
 

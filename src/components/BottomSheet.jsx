@@ -2,11 +2,12 @@ import { useState, useRef, useEffect } from 'react'
 import { useApp } from '../App'
 
 export default function BottomSheet() {
-  const { sheetData, setSheetData, categories, counts, updateCount, showToast, setPage } = useApp()
+  const { sheetData, setSheetData, categories, counts, damagedCounts, updateCount, updateDamagedCount, showToast, setPage, page } = useApp()
   const { product, code } = sheetData
   const cat = product ? categories.find(c => c.id === product.category_id) || { name: 'Sin cat.', color: '#888', emoji: '📦' } : null
+  const activeCounts = page === 'dmg' ? damagedCounts : counts
 
-  const [qty, setQty] = useState(product ? (counts[product.id] || 0) : 0)
+  const [qty, setQty] = useState(product ? (activeCounts[product.id] || 0) : 0)
   const [inputMode, setInputMode] = useState(false)
   const inputRef = useRef(null)
 
@@ -25,7 +26,11 @@ export default function BottomSheet() {
 
   function confirm() {
     if (!product) return
-    updateCount(product.id, qty)
+    if (page === 'dmg') {
+      updateDamagedCount(product.id, qty)
+    } else {
+      updateCount(product.id, qty)
+    }
     showToast(`✅ ${product.name.slice(0, 24)} → ${qty} uds`)
     close()
   }

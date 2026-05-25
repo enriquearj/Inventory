@@ -6,6 +6,7 @@ export default function Scanner() {
   const videoRef = useRef(null)
   const streamRef = useRef(null)
   const tickRef = useRef(null)
+  const zxingRef = useRef(null)
   const cooldownRef = useRef(false)
   const [flash, setFlash] = useState(false)
 
@@ -16,16 +17,16 @@ export default function Scanner() {
 
   async function startScanner() {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment' }
-      })
-      streamRef.current = stream
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream
-        await videoRef.current.play()
-      }
-
       if ('BarcodeDetector' in window) {
+        // Native path — Chrome, Edge, Android
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'environment' }
+        })
+        streamRef.current = stream
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream
+          await videoRef.current.play()
+        }
         const bd = new window.BarcodeDetector({
           formats: ['qr_code', 'code_128', 'code_39', 'ean_13', 'ean_8', 'upc_a', 'upc_e']
         })
@@ -43,7 +44,20 @@ export default function Scanner() {
           } catch (_) {}
         }, 300)
       } else {
-        showToast('⚠️ BarcodeDetector no disponible. Usa Chrome/Android.')
+        // ZXing fallback — iOS Safari, Firefox
+        const { BrowserMultiFormatReader } = await import('@zxing/browser')
+        const reader = new BrowserMultiFormatReader()
+        const controls = await reader.decodeFromConstraints(
+          { video: { facingMode: 'environment' } },
+          videoRef.current,
+          (result, _err, ctrl) => {
+            if (result) {
+              ctrl.stop()
+              onScan(result.getText())
+            }
+          }
+        )
+        zxingRef.current = controls
       }
     } catch {
       showToast('⚠️ No se pudo acceder a la cámara')
@@ -56,6 +70,10 @@ export default function Scanner() {
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(t => t.stop())
       streamRef.current = null
+    }
+    if (zxingRef.current) {
+      zxingRef.current.stop()
+      zxingRef.current = null
     }
   }
 
